@@ -1,0 +1,152 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/cbuf/sim
+T_opt
+!s110 1773319895
+Vf@Zna[iHWoGUS<^aM8;VD1
+04 11 4 work cbuf_top_tb fast 0
+=1-a02942f5082a-69b2b6d7-8d-7ab4
+Z1 o-quiet -auto_acc_if_foreign -work work +acc
+Z2 tCvgOpt 0
+n@_opt
+Z3 OL;O;10.7;67
+R0
+T_opt1
+!s110 1773474541
+V5b[SZf5fOk5LKCc9jH]mI1
+04 15 4 work cbuf_dat_top_tb fast 0
+=1-a02942f5082a-69b512ec-3d2-76e4
+R1
+R2
+n@_opt1
+R3
+vcbuf_dat_top
+Z4 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+Z5 !s110 1773474540
+!i10b 1
+!s100 g3^gN]7F[6jOPS@QbeMZg2
+IHhZQJKUf[jW`IkF6ibHLX1
+Z6 VDg1SIo80bB@j0V0VzS_@n1
+!s105 cbuf_dat_top_v_unit
+S1
+R0
+w1773473474
+8../src/cbuf_dat_top.v
+F../src/cbuf_dat_top.v
+L0 3
+Z7 OL;L;10.7;67
+r1
+!s85 0
+31
+Z8 !s108 1773474540.000000
+Z9 !s107 ../src/generic_buf.v|../src/cbuf_top.v|../src/cbuf_dat_top.v|
+Z10 !s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/cbuf_dat_top.v|../src/cbuf_top.v|../src/generic_buf.v|
+!i113 0
+Z11 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z12 !s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2
+vcbuf_dat_top_tb
+R4
+R5
+!i10b 1
+!s100 ]`EDom72KmR=F;]j9_Xk53
+ID[gdc3ZR58BMkabgQ6g;^1
+R6
+Z13 !s105 cbuf_dat_top_tb_sv_unit
+S1
+R0
+w1773474494
+Z14 8./cbuf_dat_top_tb.sv
+Z15 F./cbuf_dat_top_tb.sv
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+Z16 !s107 ./cbuf_dat_top_tb.sv|
+Z17 !s90 -reportprogress|300|-work|work|-sv|./cbuf_dat_top_tb.sv|
+!i113 0
+R11
+R2
+vcbuf_top
+R4
+R5
+!i10b 1
+!s100 :z>TFo:H291HYM1ZVk?;i2
+ILlSWBCoBIcY;Dicl?1fKM2
+R6
+!s105 cbuf_top_v_unit
+S1
+R0
+w1773410275
+8../src/cbuf_top.v
+F../src/cbuf_top.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vcbuf_top_tb
+R4
+!s110 1773473749
+!i10b 1
+!s100 >m>Ig7@:B0X4XE[UQc7Vl2
+If9<DQn]i2;B>BV5?a[doW2
+R6
+R13
+S1
+R0
+w1773473450
+R14
+R15
+L0 3
+R7
+r1
+!s85 0
+31
+!s108 1773473749.000000
+R16
+R17
+!i113 0
+R11
+R2
+vgeneric_buf
+R4
+R5
+!i10b 1
+!s100 ER[WS^RS2F_1cbW?K`QR:2
+IGLjABZ]h3]k8I`XU2;I@11
+R6
+!s105 generic_buf_v_unit
+S1
+R0
+w1773234102
+8../src/generic_buf.v
+F../src/generic_buf.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2

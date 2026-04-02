@@ -1,0 +1,167 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/SPU/sim
+T_opt
+Z1 !s110 1773538947
+V9H9>dUmU@X>SN^2H=d3nF0
+04 13 4 work cmac_array_tb fast 0
+=1-a02942f5082a-69b60e83-1fa-5e30
+o-quiet -auto_acc_if_foreign -work work +acc
+Z2 tCvgOpt 0
+n@_opt
+OL;O;10.7;67
+vcmac_8_channels
+Z3 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+R1
+!i10b 1
+!s100 0@W`KYJF`TlzlQjkP`VB22
+Iooi]5TXMTZ;HF@XLHhgfG2
+Z4 VDg1SIo80bB@j0V0VzS_@n1
+!s105 cmac_8_v_unit
+S1
+R0
+w1773195623
+8../src/cmac_8.v
+F../src/cmac_8.v
+L0 5
+Z5 OL;L;10.7;67
+r1
+!s85 0
+31
+Z6 !s108 1773538947.000000
+Z7 !s107 ../src/simd_mac_dsp.v|../src/cmac_row.v|../src/cmac_array.v|../src/cmac_8.v|
+Z8 !s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/cmac_8.v|../src/cmac_array.v|../src/cmac_row.v|../src/simd_mac_dsp.v|
+!i113 0
+Z9 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z10 !s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2
+vcmac_array
+R3
+R1
+!i10b 1
+!s100 lcG1glT<81UmcYYeGo72n3
+IF?C]4>92fbSb^ZZio65=<2
+R4
+!s105 cmac_array_v_unit
+S1
+R0
+w1773486370
+8../src/cmac_array.v
+F../src/cmac_array.v
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!i113 0
+R9
+R10
+R2
+vcmac_array_tb
+R3
+R1
+!i10b 1
+!s100 J3@3f<m11l]h@bjbmT8<H3
+Ii;kEIc5PLF?YR]=BMVS>P1
+R4
+Z11 !s105 cmac_array_tb_sv_unit
+S1
+R0
+w1773538941
+Z12 8./cmac_array_tb.sv
+Z13 F./cmac_array_tb.sv
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+Z14 !s107 ./cmac_array_tb.sv|
+Z15 !s90 -reportprogress|300|-work|work|-sv|./cmac_array_tb.sv|
+!i113 0
+R9
+R2
+vcmac_row
+R3
+R1
+!i10b 1
+!s100 bPX^PA=ZKNc52C@z=VW>b2
+IXXYz7h6Z3c4;YHRaazc7C1
+R4
+!s105 cmac_row_v_unit
+S1
+R0
+w1773488908
+8../src/cmac_row.v
+F../src/cmac_row.v
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!i113 0
+R9
+R10
+R2
+vsimd_mac_dsp
+R3
+R1
+!i10b 1
+!s100 7i5^FfoYJeE;:Pcc`[m4:1
+IZij6_V8<MJeVi@?CedFkQ0
+R4
+!s105 simd_mac_dsp_v_unit
+S1
+R0
+w1773212404
+8../src/simd_mac_dsp.v
+F../src/simd_mac_dsp.v
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!i113 0
+R9
+R10
+R2
+vtb_cmac_array
+R3
+!s110 1773538857
+!i10b 1
+!s100 `7gLn=ba7<EULS1VZh[aG3
+IPADI2^AgBoeP:<1:K?Oz@3
+R4
+R11
+S1
+R0
+w1773538780
+R12
+R13
+L0 3
+R5
+r1
+!s85 0
+31
+!s108 1773538857.000000
+R14
+R15
+!i113 0
+R9
+R2

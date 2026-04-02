@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2024.1 (64-bit)
+# SW Build 5076996 on Wed May 22 18:37:14 MDT 2024
+# IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+# SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+# Start of session at: Wed Mar 25 19:11:41 2026
+# Process ID: 25692
+# Current directory: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/cbuf_synth_1
+# Command line: vivado.exe -log cbuf.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source cbuf.tcl
+# Log file: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/cbuf_synth_1/cbuf.vds
+# Journal file: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/cbuf_synth_1\vivado.jou
+# Running On        :soyorin
+# Platform          :Windows Server 2016 or Windows 10
+# Operating System  :26200
+# Processor Detail  :13th Gen Intel(R) Core(TM) i7-13700H
+# CPU Frequency     :2918 MHz
+# CPU Physical cores:14
+# CPU Logical cores :20
+# Host memory       :16788 MB
+# Swap memory       :13421 MB
+# Total Virtual     :30210 MB
+# Available Virtual :3522 MB
+#-----------------------------------------------------------
+source cbuf.tcl -notrace

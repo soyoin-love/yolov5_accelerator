@@ -1,0 +1,79 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (win64) Build 5076996 Wed May 22 18:37:14 MDT 2024
+| Date         : Wed Mar 25 19:11:20 2026
+| Host         : soyorin running 64-bit major release  (build 9200)
+| Command      : upgrade_ip
+| Device       : xc7z100ffg900-2
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'wbuf'
+
+1. Summary
+----------
+
+SUCCESS in the update of wbuf (xilinx.com:ip:blk_mem_gen:8.4 (Rev. 8)) to current project options.
+
+
+
+
+
+
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (win64) Build 5076996 Wed May 22 18:37:14 MDT 2024
+| Date         : Wed Mar 25 19:11:20 2026
+| Host         : soyorin running 64-bit major release  (build 9200)
+| Command      : upgrade_ip
+| Device       : xc7z100ffg900-2
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'o_buf'
+
+1. Summary
+----------
+
+SUCCESS in the update of o_buf (xilinx.com:ip:blk_mem_gen:8.4 (Rev. 8)) to current project options.
+
+
+
+
+
+
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (win64) Build 5076996 Wed May 22 18:37:14 MDT 2024
+| Date         : Wed Mar 25 19:11:19 2026
+| Host         : soyorin running 64-bit major release  (build 9200)
+| Command      : upgrade_ip
+| Device       : xc7z100ffg900-2
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'cbuf'
+
+1. Summary
+----------
+
+SUCCESS in the update of cbuf (xilinx.com:ip:blk_mem_gen:8.4 (Rev. 8)) to current project options.
+
+
+
+
+
+
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (win64) Build 5076996 Wed May 22 18:37:14 MDT 2024
+| Date         : Wed Mar 25 19:11:18 2026
+| Host         : soyorin running 64-bit major release  (build 9200)
+| Command      : upgrade_ip
+| Device       : xc7z100ffg900-2
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'bbuf'
+
+1. Summary
+----------
+
+SUCCESS in the update of bbuf (xilinx.com:ip:blk_mem_gen:8.4 (Rev. 8)) to current project options.
+

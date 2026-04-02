@@ -1,0 +1,68 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/upsample/sim
+T_opt
+Z1 !s110 1772699630
+VNUPljNLCJB0g3GH`cffha3
+04 16 4 work tb_upsample_fifo fast 0
+=1-a02942f5082a-69a93fee-29a-e78
+o-quiet -auto_acc_if_foreign -work work +acc
+Z2 tCvgOpt 0
+n@_opt
+OL;O;10.7;67
+vtb_upsample_fifo
+Z3 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+R1
+!i10b 1
+!s100 jPm@JgjnzO;QGjCPliTM<1
+IWe_kSYQkh>o[e;`@mmkE`2
+Z4 VDg1SIo80bB@j0V0VzS_@n1
+!s105 tb_upsample_fifo_sv_unit
+S1
+R0
+w1772699619
+8./tb_upsample_fifo.sv
+F./tb_upsample_fifo.sv
+L0 3
+Z5 OL;L;10.7;67
+r1
+!s85 0
+31
+Z6 !s108 1772699630.000000
+!s107 ./tb_upsample_fifo.sv|
+!s90 -reportprogress|300|-work|work|-sv|./tb_upsample_fifo.sv|
+!i113 0
+Z7 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2
+vupsample_fifo
+R3
+R1
+!i10b 1
+!s100 04eke@IP<9AMClLJ5FBNh1
+IjJ4@<[DWei8i`GD5Z^7]G1
+R4
+!s105 upsample_fifo_v_unit
+S1
+R0
+w1772696315
+8../src/upsample_fifo.v
+F../src/upsample_fifo.v
+L0 1
+R5
+r1
+!s85 0
+31
+R6
+!s107 ../src/upsample_fifo.v|
+!s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/upsample_fifo.v|
+!i113 0
+R7
+!s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2

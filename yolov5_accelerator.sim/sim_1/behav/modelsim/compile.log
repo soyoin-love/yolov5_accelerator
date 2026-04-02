@@ -1,0 +1,75 @@
+# do {testbench_compile.do}
+# ** Warning: (vlib-34) Library already exists at "modelsim_lib/work".
+# ** Warning: (vlib-34) Library already exists at "modelsim_lib/msim".
+# ** Warning: (vlib-34) Library already exists at "modelsim_lib/msim/xil_defaultlib".
+# Model Technology ModelSim SE-64 vmap 10.7 Lib Mapping Utility 2017.12 Dec  7 2017
+# vmap xil_defaultlib modelsim_lib/msim/xil_defaultlib 
+# Modifying modelsim.ini
+# Model Technology ModelSim SE-64 vlog 10.7 Compiler 2017.12 Dec  7 2017
+# Start time: 16:08:39 on Apr 02,2026
+# vlog -incr -mfcu -work xil_defaultlib "+incdir+../../../../" "+incdir+../../../../sim" ../../../../ip/o_buf/o_buf_sim_netlist.v ../../../../ip/bbuf/bbuf_sim_netlist.v ../../../../ip/wbuf_1/wbuf_sim_netlist.v ../../../../ip/cbuf/cbuf_sim_netlist.v ../../../../src/cdma/accel_cdma_domain_top.v ../../../../src/cdma/B_CDMA/src/b_cdma_recv_data.v ../../../../src/cdma/B_CDMA/src/b_cdma_send_cmd.v ../../../../src/cdma/B_CDMA/src/b_cdma_top.v ../../../../src/cbuf/src/bbuf_dat_top.v ../../../../src/cacc/src/bbuf_prefetcher.v ../../../../src/cacc/src/cacc_core.v ../../../../src/cacc/src/cacc_requant.v ../../../../src/cacc/src/cacc_top.v ../../../../src/cbuf/src/cbuf_dat_top.v ../../../../src/cdma/CDMA/src/cdma_read_req.v ../../../../src/cdma/CDMA/src/cdma_top.v ../../../../src/SPU/src/cmac_8.v ../../../../src/SPU/src/cmac_array.v ../../../../src/SPU/src/cmac_row.v ../../../../src/cdma/CDMA/src/cmda_rx_write.v ../../../../src/CSC/src/csc_top.v ../../../../src/mcif/fifo_dff.v ../../../../src/mcif/hs_pipe.v ../../../../src/mcif/mcif_4r_4w.v ../../../../src/mcif/mcif_arb_comb4.v ../../../../src/mcif/mcif_rd_4r.v ../../../../src/mcif/mcif_rr_arb4.v ../../../../src/mcif/mcif_wr_4w.v ../../../../src/cbuf/src/mem_domain_top.v ../../../../src/obuf/src/obuf_dat_top.v ../../../../src/SPU/src/simd_mac_dsp.v ../../../../src/cdma/W_CDMA/src/w_cdma_recv_data.v ../../../../src/cdma/W_CDMA/src/w_cdma_send_cmd.v ../../../../src/cdma/W_CDMA/src/w_cdma_top.v ../../../../src/cbuf/src/wbuf_top.v ../../../../src/WDMA/src/wdma_core.v ../../../../src/CSR/yolo_global_fsm.v ../../../../src/CSR/yolo_sim_top.v ../../../../src/CSR/yolo_top.v 
+# -- Skipping module o_buf
+# -- Compiling module glbl
+# -- Skipping module bbuf
+# -- Skipping module wbuf
+# -- Skipping module cbuf
+# -- Skipping module accel_cdma_domain_top
+# -- Skipping module b_cdma_recv_data
+# -- Skipping module b_cdma_send_cmd
+# -- Skipping module b_cdma_top
+# -- Skipping module bbuf_dat_top
+# -- Skipping module bbuf_prefetcher
+# -- Skipping module cacc_core
+# -- Skipping module cacc_requant
+# -- Skipping module cacc_top
+# -- Skipping module cbuf_dat_top
+# -- Skipping module cdma_read_req
+# -- Skipping module cdma_top
+# -- Skipping module cmac_8_channels
+# -- Skipping module cmac_array
+# -- Skipping module cmac_row
+# -- Skipping module cdma_rx_write
+# -- Skipping module csc_dat
+# -- Skipping module fifo_dff
+# -- Skipping module hs_pipe
+# -- Skipping module mcif_4r_4w
+# -- Skipping module mcif_arb_comb4
+# -- Skipping module mcif_rd_4r
+# -- Skipping module mcif_rr_arb4
+# -- Skipping module mcif_wr_4w
+# -- Skipping module mem_domain_top
+# -- Skipping module obuf_dat_top
+# -- Skipping module simd_mac_dsp
+# -- Skipping module w_cdma_recv_data
+# -- Skipping module w_cdma_send_cmd
+# -- Skipping module w_cdma_top
+# -- Skipping module wbuf_dat_top
+# -- Skipping module wdma_core
+# -- Skipping module yolo_global_fsm
+# -- Compiling module yolo_sim_top
+# -- Skipping module yolo_accel_top
+# 
+# Top level modules:
+# 	glbl
+# 	yolo_sim_top
+# End time: 16:08:40 on Apr 02,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim SE-64 vlog 10.7 Compiler 2017.12 Dec  7 2017
+# Start time: 16:08:40 on Apr 02,2026
+# vlog -incr -mfcu -sv -work xil_defaultlib "+incdir+../../../../" "+incdir+../../../../sim" ../../../../sim/AXI_HP_Slave.sv ../../../../sim/testbench.sv 
+# -- Skipping module AXI_HP_Slave
+# -- Skipping module testbench
+# 
+# Top level modules:
+# 	testbench
+# End time: 16:08:40 on Apr 02,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim SE-64 vlog 10.7 Compiler 2017.12 Dec  7 2017
+# Start time: 16:08:40 on Apr 02,2026
+# vlog -work xil_defaultlib glbl.v 
+# -- Compiling module glbl
+# 
+# Top level modules:
+# 	glbl
+# End time: 16:08:40 on Apr 02,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0

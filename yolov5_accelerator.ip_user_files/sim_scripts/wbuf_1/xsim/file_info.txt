@@ -1,0 +1,2 @@
+wbuf.v,verilog,xil_defaultlib,../../../../ip/wbuf_1/sim/wbuf.v,
+glbl.v,Verilog,xil_defaultlib,glbl.v

@@ -1,0 +1,93 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/cbuf/B_buf/sim
+T_opt
+!s110 1774011135
+V1hSMWh`aUkkVGTdhc176V3
+04 15 4 work bbuf_dat_top_tb fast 0
+=1-a02942f5082a-69bd42ff-6-75b0
+o-quiet -auto_acc_if_foreign -work work +acc
+Z1 tCvgOpt 0
+n@_opt
+OL;O;10.7;67
+vbbuf_dat_top
+Z2 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+Z3 !s110 1774011134
+!i10b 1
+!s100 NaYEdg7FH0_1lnQO:IQ<02
+IFa[=KliC=iZ<dR_mO?7k92
+Z4 VDg1SIo80bB@j0V0VzS_@n1
+!s105 bbuf_dat_top_v_unit
+S1
+R0
+w1773822099
+8../src/bbuf_dat_top.v
+F../src/bbuf_dat_top.v
+L0 3
+Z5 OL;L;10.7;67
+r1
+!s85 0
+31
+Z6 !s108 1774011134.000000
+Z7 !s107 ../src/generic_buf.v|../src/bbuf_dat_top.v|
+Z8 !s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/bbuf_dat_top.v|../src/generic_buf.v|
+!i113 0
+Z9 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z10 !s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R1
+vbbuf_dat_top_tb
+R2
+R3
+!i10b 1
+!s100 T4k2U5SWK2[g7:LhQIUeI0
+I^oF3e<[]MzE^0^d]hFj:A3
+R4
+!s105 bbuf_dat_top_tb_sv_unit
+S1
+R0
+w1774011016
+8./bbuf_dat_top_tb.sv
+F./bbuf_dat_top_tb.sv
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+!s107 ./bbuf_dat_top_tb.sv|
+!s90 -reportprogress|300|-work|work|-sv|./bbuf_dat_top_tb.sv|
+!i113 0
+R9
+R1
+vgeneric_buf
+R2
+R3
+!i10b 1
+!s100 ER[WS^RS2F_1cbW?K`QR:2
+IGLjABZ]h3]k8I`XU2;I@11
+R4
+!s105 generic_buf_v_unit
+S1
+R0
+w1773234102
+8../src/generic_buf.v
+F../src/generic_buf.v
+L0 3
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!i113 0
+R9
+R10
+R1

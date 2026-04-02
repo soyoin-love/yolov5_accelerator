@@ -1,0 +1,251 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/cdma/sim
+T_opt
+!s110 1773464613
+Vn^Va@S]T858lfjh=n0PIg1
+04 11 4 work cdma_top_tb fast 0
+=1-a02942f5082a-69b4ec25-a9-224
+Z1 o-quiet -auto_acc_if_foreign -work work +acc
+Z2 tCvgOpt 0
+n@_opt
+Z3 OL;O;10.7;67
+R0
+T_opt1
+Z4 !s110 1773663738
+VQbTe71:PJN_=CSA_DI3Mm0
+04 13 4 work w_cdma_top_tb fast 0
+=1-a02942f5082a-69b7f5fa-2bf-6c8c
+R1
+R2
+n@_opt1
+R3
+vcdma_read_req
+Z5 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+R4
+!i10b 1
+!s100 e>I;YJ[DabZUlVohKDnaF3
+IlBe>aZSzWnhC3CQ=e<GG]3
+Z6 VDg1SIo80bB@j0V0VzS_@n1
+!s105 cdma_read_req_v_unit
+S1
+R0
+w1773464439
+8../src/cdma_read_req.v
+F../src/cdma_read_req.v
+L0 3
+Z7 OL;L;10.7;67
+r1
+!s85 0
+31
+Z8 !s108 1773663738.000000
+Z9 !s107 ../src/w_cdma_top.v|../src/w_cdma_send_cmd.v|../src/w_cdma_recv_data.v|../src/cmda_rx_write.v|../src/cdma_top.v|../src/cdma_read_req.v|
+Z10 !s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/cdma_read_req.v|../src/cdma_top.v|../src/cmda_rx_write.v|../src/w_cdma_recv_data.v|../src/w_cdma_send_cmd.v|../src/w_cdma_top.v|
+!i113 0
+Z11 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z12 !s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2
+vcdma_rx_write
+R5
+R4
+!i10b 1
+!s100 YDNa@]5k4ggM3Ha6iehn[3
+I2D:;7^QKm0lJfeiIlzHF82
+R6
+!s105 cmda_rx_write_v_unit
+S1
+R0
+w1773370366
+8../src/cmda_rx_write.v
+F../src/cmda_rx_write.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vcdma_top
+R5
+R4
+!i10b 1
+!s100 d@8B8oNn?:Wn2b=Wg]g300
+IVa9ZHHn[Ol41^<O4>Z4M;2
+R6
+!s105 cdma_top_v_unit
+S1
+R0
+w1773370118
+8../src/cdma_top.v
+F../src/cdma_top.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vcdma_top_tb
+R5
+!s110 1773654526
+!i10b 1
+!s100 9f<K^DNhEEGhMnWFehFb32
+IdBHS@>Ad8T`N?Hi_<k7@o3
+R6
+!s105 cdma_top_tb_sv_unit
+S1
+R0
+w1773473850
+8./cdma_top_tb.sv
+F./cdma_top_tb.sv
+L0 3
+R7
+r1
+!s85 0
+31
+!s108 1773654526.000000
+Z13 !s107 ./w_cdma_top_tb.sv|./cdma_top_tb.sv|
+Z14 !s90 -reportprogress|300|-work|work|-sv|./cdma_top_tb.sv|./w_cdma_top_tb.sv|
+!i113 0
+R11
+R2
+vtb_w_cdma_top
+R5
+!s110 1773654472
+!i10b 1
+!s100 ^FSHL@zS2Tom;I>i^Z><=2
+Ikb`b[_CBAHg8FoMG>1[h:0
+R6
+Z15 !s105 w_cdma_top_tb_sv_unit
+S1
+R0
+w1773654292
+Z16 8./w_cdma_top_tb.sv
+Z17 F./w_cdma_top_tb.sv
+L0 3
+R7
+r1
+!s85 0
+31
+!s108 1773654472.000000
+R13
+R14
+!i113 0
+R11
+R2
+vw_cdma_recv_data
+R5
+R4
+!i10b 1
+!s100 7K>8lh][BHk]Z4Ha^j>[c3
+I65<DA]>]3_Tf5VV=4E?m23
+R6
+!s105 w_cdma_recv_data_v_unit
+S1
+R0
+w1773663487
+8../src/w_cdma_recv_data.v
+F../src/w_cdma_recv_data.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vw_cdma_send_cmd
+R5
+R4
+!i10b 1
+!s100 kM2hlkPLa<:a7RK8TSfR10
+Ia^5EHNfkPBiWoAKLjPNhT0
+R6
+!s105 w_cdma_send_cmd_v_unit
+S1
+R0
+w1773585685
+8../src/w_cdma_send_cmd.v
+F../src/w_cdma_send_cmd.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vw_cdma_top
+R5
+R4
+!i10b 1
+!s100 K=g^Ab^MZ5z6^IDbaPU7Y2
+IIlg=ig2nRnlTW=9XW>Qd73
+R6
+!s105 w_cdma_top_v_unit
+S1
+R0
+w1773663271
+8../src/w_cdma_top.v
+F../src/w_cdma_top.v
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+R2
+vw_cdma_top_tb
+R5
+R4
+!i10b 1
+!s100 iBWVQ=8zGRnS23@DPUHLh2
+Ib_IYV6Xem[Y^5MPQ47=`j2
+R6
+R15
+S1
+R0
+w1773663730
+R16
+R17
+L0 3
+R7
+r1
+!s85 0
+31
+R8
+!s107 ./w_cdma_top_tb.sv|
+!s90 -reportprogress|300|-work|work|-sv|./w_cdma_top_tb.sv|
+!i113 0
+R11
+R2

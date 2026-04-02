@@ -1,0 +1,25 @@
+
+*** Running vivado
+    with args -log o_buf.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source o_buf.tcl
+
+
+
+****** Vivado v2024.1 (64-bit)
+  **** SW Build 5076996 on Wed May 22 18:37:14 MDT 2024
+  **** IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+  **** SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+  **** Start of session at: Wed Mar 25 19:13:00 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source o_buf.tcl -notrace
+create_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:07 . Memory (MB): peak = 629.680 ; gain = 200.348
+INFO: [IP_Flow 19-6924] IPCACHE: Running cache check for IP inst: o_buf
+INFO: [IP_Flow 19-6922] IPCACHE: Exporting cached entry d616269d9f3db634 to dir: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1
+INFO: [IP_Flow 19-6928] IPCACHE: copied cached file e:/IEEE2027/yolov5_accelerator/yolov5_accelerator.cache/ip/2024.1/d/6/d616269d9f3db634/bbuf.dcp to E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1/o_buf.dcp.
+INFO: [IP_Flow 19-6928] IPCACHE: copied cached file e:/IEEE2027/yolov5_accelerator/yolov5_accelerator.cache/ip/2024.1/d/6/d616269d9f3db634/bbuf_sim_netlist.v to E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1/o_buf_sim_netlist.v.
+INFO: [IP_Flow 19-6928] IPCACHE: copied cached file e:/IEEE2027/yolov5_accelerator/yolov5_accelerator.cache/ip/2024.1/d/6/d616269d9f3db634/bbuf_sim_netlist.vhdl to E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1/o_buf_sim_netlist.vhdl.
+INFO: [IP_Flow 19-6928] IPCACHE: copied cached file e:/IEEE2027/yolov5_accelerator/yolov5_accelerator.cache/ip/2024.1/d/6/d616269d9f3db634/bbuf_stub.v to E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1/o_buf_stub.v.
+INFO: [IP_Flow 19-6928] IPCACHE: copied cached file e:/IEEE2027/yolov5_accelerator/yolov5_accelerator.cache/ip/2024.1/d/6/d616269d9f3db634/bbuf_stub.vhdl to E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/o_buf_synth_1/o_buf_stub.vhdl.
+INFO: [IP_Flow 19-4838] Using cached IP synthesis design for IP o_buf, cache-ID = d616269d9f3db634.
+INFO: [Common 17-206] Exiting Vivado at Wed Mar 25 19:13:10 2026...

@@ -1,0 +1,118 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/IEEE2027/my_accelerator/cdma/B_CDMA/sim
+T_opt
+Z1 !s110 1774010594
+V^Kh_agYGZ8H>FZn7>Az4H3
+04 9 4 work b_cdma_tb fast 0
+=1-a02942f5082a-69bd40e2-138-6960
+o-quiet -auto_acc_if_foreign -work work +acc
+Z2 tCvgOpt 0
+n@_opt
+OL;O;10.7;67
+vb_cdma_recv_data
+Z3 DXx6 sv_std 3 std 0 22 >9az<^>2ff9DAl3OFGaAf1
+Z4 !s110 1774010593
+!i10b 1
+!s100 ndOK1GYdGdi3_[LY35Nbk3
+I6UL?`CkcL<FBE3l@cCUQh1
+Z5 VDg1SIo80bB@j0V0VzS_@n1
+!s105 b_cdma_recv_data_v_unit
+S1
+R0
+w1774007258
+8../src/b_cdma_recv_data.v
+F../src/b_cdma_recv_data.v
+L0 3
+Z6 OL;L;10.7;67
+r1
+!s85 0
+31
+Z7 !s108 1774010593.000000
+Z8 !s107 ../src/b_cdma_top.v|../src/b_cdma_send_cmd.v|../src/b_cdma_recv_data.v|
+Z9 !s90 -reportprogress|300|-work|work|-sv|+incdir+../../|../src/b_cdma_recv_data.v|../src/b_cdma_send_cmd.v|../src/b_cdma_top.v|
+!i113 0
+Z10 o-work work -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z11 !s92 -work work -sv +incdir+../../ -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R2
+vb_cdma_send_cmd
+R3
+R4
+!i10b 1
+!s100 cz6bmFejRfi]@Vd`N]7L>1
+I_I5:H4LIC7h0n1d1b?M@T1
+R5
+!s105 b_cdma_send_cmd_v_unit
+S1
+R0
+w1774008228
+8../src/b_cdma_send_cmd.v
+F../src/b_cdma_send_cmd.v
+L0 3
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 0
+R10
+R11
+R2
+vb_cdma_tb
+R3
+R1
+!i10b 1
+!s100 @79<EV`IWAhLGH9?V:3fG2
+IA8PSlomSPk<J]jZnfL4Ng0
+R5
+!s105 b_cdma_tb_sv_unit
+S1
+R0
+w1774010581
+8./b_cdma_tb.sv
+F./b_cdma_tb.sv
+L0 3
+R6
+r1
+!s85 0
+31
+R7
+!s107 ./b_cdma_tb.sv|
+!s90 -reportprogress|300|-work|work|-sv|./b_cdma_tb.sv|
+!i113 0
+R10
+R2
+vb_cdma_top
+R3
+R4
+!i10b 1
+!s100 @_Wl1_zi0ZGXW`KAEfNYU3
+IzmGb@X]0IJJ6BS3HOoD240
+R5
+!s105 b_cdma_top_v_unit
+S1
+R0
+w1773823405
+8../src/b_cdma_top.v
+F../src/b_cdma_top.v
+L0 3
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 0
+R10
+R11
+R2
