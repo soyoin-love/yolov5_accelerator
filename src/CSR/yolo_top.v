@@ -38,6 +38,7 @@ module yolo_accel_top #(
     input  wire                               buf_start,
     input  wire                               csc_start,
     input  wire                               cacc_start,
+    input  wire                               pool_start,
     input  wire                               obuf_start,
     input  wire                               wdma_start,
 
@@ -95,6 +96,8 @@ module yolo_accel_top #(
     // 写回 DMA 配置
     input  wire [31:0]                        cfg_wdma_base_addr,
     input  wire [15:0]                        cfg_out_ch_groups, 
+    input  wire                               cfg_op_mode,
+    input  wire                               cfg_pool_pad_zero,
     // input  wire [15:0]                        cfg_wdma_total_cols,
     // input  wire [15:0]                        cfg_wdma_total_rows,
 
@@ -197,6 +200,21 @@ module yolo_accel_top #(
     wire                                cbuf_rd_dat_vld;
     wire [BANK_NUM*TK_IN*N-1:0]         cbuf_rd_dat_out;
 
+    wire [7:0]                          csc_cbuf_rd_en;
+    wire [15:0]                         csc_cbuf_rd_row;
+    wire [15:0]                         csc_cbuf_rd_col_align;
+    wire [15:0]                         csc_cbuf_rd_ch_grp;
+    wire                                csc_cbuf_rd_row_free;
+    wire [3:0]                          csc_cbuf_rd_free_num;
+
+    wire [7:0]                          pool_cbuf_rd_en;
+    wire [15:0]                         pool_cbuf_rd_row;
+    wire [15:0]                         pool_cbuf_rd_col_align;
+    wire [15:0]                         pool_cbuf_rd_ch_grp;
+    wire                                pool_cbuf_rd_row_free;
+    wire [3:0]                          pool_cbuf_rd_free_num;
+    wire                                pool_done;
+
     // --- BBUF 交互线网 ---
     wire [BANK_NUM-1:0]                 bbuf_wr_en;
     wire [BBUF_ADDR_W-1:0]              bbuf_wr_addr;
@@ -228,6 +246,12 @@ module yolo_accel_top #(
     wire                                cacc_obuf_wr_vld;
     wire [2*BANK_NUM-1:0]               cacc_obuf_wr_mask;     // 修正：8bit -> 16bit
     wire [BANK_NUM*128-1:0]              cacc_obuf_wr_dat;      
+    wire                                pool_obuf_wr_vld;
+    wire [2*BANK_NUM-1:0]               pool_obuf_wr_mask;
+    wire [BANK_NUM*128-1:0]             pool_obuf_wr_dat;
+    wire                                obuf_wr_vld_mux;
+    wire [2*BANK_NUM-1:0]               obuf_wr_mask_mux;
+    wire [BANK_NUM*128-1:0]             obuf_wr_dat_mux;
 
     // --- OBUF & WDMA 交互线网 (补全声明) ---
     wire [2*BANK_NUM-1:0]               wdma_obuf_rd_en;
@@ -237,6 +261,19 @@ module yolo_accel_top #(
     wire [127:0]                        obuf_wdma_rd_dat;
     wire [OBUF_ADDR_W:0]                obuf_used_lines_g0;
     wire [OBUF_ADDR_W:0]                obuf_used_lines_g1;
+    wire [3:0]                          cbuf_min_calc_rows_mux;
+
+    assign cbuf_rd_en        = cfg_op_mode ? pool_cbuf_rd_en        : csc_cbuf_rd_en;
+    assign cbuf_rd_row       = cfg_op_mode ? pool_cbuf_rd_row       : csc_cbuf_rd_row;
+    assign cbuf_rd_col_align = cfg_op_mode ? pool_cbuf_rd_col_align : csc_cbuf_rd_col_align;
+    assign cbuf_rd_ch_grp    = cfg_op_mode ? pool_cbuf_rd_ch_grp    : csc_cbuf_rd_ch_grp;
+    assign cbuf_rd_row_free  = cfg_op_mode ? pool_cbuf_rd_row_free  : csc_cbuf_rd_row_free;
+    assign cbuf_rd_free_num  = cfg_op_mode ? pool_cbuf_rd_free_num  : csc_cbuf_rd_free_num;
+
+    assign obuf_wr_vld_mux  = cfg_op_mode ? pool_obuf_wr_vld  : cacc_obuf_wr_vld;
+    assign obuf_wr_mask_mux = cfg_op_mode ? pool_obuf_wr_mask : cacc_obuf_wr_mask;
+    assign obuf_wr_dat_mux  = cfg_op_mode ? pool_obuf_wr_dat  : cacc_obuf_wr_dat;
+    assign cbuf_min_calc_rows_mux = cfg_op_mode ? 4'd5 : cfg_buf_min_calc_rows;
 
     // =========================================================================
     // A. 互联矩阵层 (MCIF)
@@ -381,7 +418,7 @@ module yolo_accel_top #(
         // 全局特征配置
         .cfg_max_col_blocks     (cfg_buf_max_col_blocks),
         .cfg_max_ch_groups      (cfg_buf_max_ch_groups),
-        .cfg_min_calc_rows      (cfg_buf_min_calc_rows),
+        .cfg_min_calc_rows      (cbuf_min_calc_rows_mux),
         .cfg_height             (cfg_f_height),
 
         // CBUF 端口
@@ -442,9 +479,9 @@ module yolo_accel_top #(
         .cfg_stride_x(cfg_csc_stride_x), .cfg_stride_y(cfg_csc_stride_y), .cfg_pad_left(cfg_csc_pad_left),     
         .cfg_pad_up(cfg_csc_pad_up), .cfg_active_banks(cfg_csc_active_banks), .csc_row_done(csc_row_done),
         
-        .cbuf_can_read(cbuf_can_read), .cbuf_rd_en(cbuf_rd_en), .cbuf_rd_row(cbuf_rd_row),        
-        .cbuf_rd_col_align(cbuf_rd_col_align), .cbuf_rd_ch_grp(cbuf_rd_ch_grp),     
-        .cbuf_rd_row_free(cbuf_rd_row_free), .cbuf_rd_free_num(cbuf_rd_free_num), .cbuf_rd_dat(cbuf_rd_dat_out),
+        .cbuf_can_read(cbuf_can_read), .cbuf_rd_en(csc_cbuf_rd_en), .cbuf_rd_row(csc_cbuf_rd_row),
+        .cbuf_rd_col_align(csc_cbuf_rd_col_align), .cbuf_rd_ch_grp(csc_cbuf_rd_ch_grp),
+        .cbuf_rd_row_free(csc_cbuf_rd_row_free), .cbuf_rd_free_num(csc_cbuf_rd_free_num), .cbuf_rd_dat(cbuf_rd_dat_out),
         
         .wbuf_can_read(wbuf_can_read), .wbuf_rd_en(wbuf_rd_en),
         .wbuf_step_en(wbuf_step_en), .wbuf_offset_clr(wbuf_offset_clr), .wbuf_region_done(wbuf_region_done),
@@ -506,6 +543,36 @@ module yolo_accel_top #(
         .obuf_wr_dat(cacc_obuf_wr_dat)
     );
 
+    pool_top #(
+        .BANK_NUM(BANK_NUM),
+        .TK_IN(TK_IN),
+        .N(N)
+    ) u_pool (
+        .clk(clk),
+        .rst_n(rst_n),
+        .start(pool_start),
+        .cfg_w_in(cfg_csc_w_in),
+        .cfg_h_in(cfg_csc_h_in),
+        .cfg_w_out(cfg_csc_w_out),
+        .cfg_h_out(cfg_csc_h_out),
+        .cfg_ch_groups(cfg_out_ch_groups),
+        .cfg_pad_zero(cfg_pool_pad_zero),
+        .cbuf_can_read(cbuf_can_read),
+        .cbuf_rd_en(pool_cbuf_rd_en),
+        .cbuf_rd_row(pool_cbuf_rd_row),
+        .cbuf_rd_col_align(pool_cbuf_rd_col_align),
+        .cbuf_rd_ch_grp(pool_cbuf_rd_ch_grp),
+        .cbuf_rd_row_free(pool_cbuf_rd_row_free),
+        .cbuf_rd_free_num(pool_cbuf_rd_free_num),
+        .cbuf_rd_dat_vld(cbuf_rd_dat_vld),
+        .cbuf_rd_dat(cbuf_rd_dat_out),
+        .obuf_can_write(obuf_can_write),
+        .obuf_wr_vld(pool_obuf_wr_vld),
+        .obuf_wr_mask(pool_obuf_wr_mask),
+        .obuf_wr_dat(pool_obuf_wr_dat),
+        .pool_done(pool_done)
+    );
+
     // =========================================================================
     // F. 写回与隔离层 (OBUF + WDMA)
     // =========================================================================
@@ -517,9 +584,9 @@ module yolo_accel_top #(
         .clk(clk), .rst_n(rst_n), .start(obuf_start),
         
         // CACC 写入端
-        .cacc_wr_vld(cacc_obuf_wr_vld), 
-        .cacc_wr_bank_en(cacc_obuf_wr_mask), // 16bit 掩码直连
-        .cacc_wr_dat(cacc_obuf_wr_dat),   
+        .cacc_wr_vld(obuf_wr_vld_mux),
+        .cacc_wr_bank_en(obuf_wr_mask_mux), // 16bit 掩码直连
+        .cacc_wr_dat(obuf_wr_dat_mux),
         .obuf_can_write(obuf_can_write),
         
         // WDMA 读取端

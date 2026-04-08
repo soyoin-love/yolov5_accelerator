@@ -13,6 +13,7 @@ module yolo_global_fsm (
     
     // 网络维度参数
     input  wire [15:0] cfg_h_out,     // 输出特征图总行数，用于比对权重重载次数
+    input  wire        cfg_op_mode,   // 0: convolution, 1: pooling
 
     // ==========================================
     // 发往各子模块的发令枪 (Start Signals)
@@ -23,6 +24,7 @@ module yolo_global_fsm (
     output reg         buf_start,
     output reg         csc_start,
     output reg         cacc_start,
+    output reg         pool_start,
     output reg         obuf_start,
     output reg         wdma_start,
 
@@ -99,6 +101,7 @@ module yolo_global_fsm (
             buf_start        <= 1'b0;
             csc_start        <= 1'b0;
             cacc_start       <= 1'b0;
+            pool_start       <= 1'b0;
             obuf_start       <= 1'b0;
             wdma_start       <= 1'b0;
             
@@ -113,12 +116,13 @@ module yolo_global_fsm (
             buf_start    <= 1'b0;
             csc_start    <= 1'b0;
             cacc_start   <= 1'b0;
+            pool_start   <= 1'b0;
             obuf_start   <= 1'b0;
             wdma_start   <= 1'b0;
             ap_done      <= 1'b0;
 
             // 监听 CSC 脉冲并存入挂起寄存器 (防止脉冲丢失)
-            if (state == ST_RUNNING && csc_row_done) begin
+            if (state == ST_RUNNING && !cfg_op_mode && csc_row_done) begin  //不为卷积模式不触发权重读取
                 w_reload_pending <= 1'b1;
             end
 
@@ -139,17 +143,23 @@ module yolo_global_fsm (
                     ap_idle      <= 1'b0;
                     // 全局首次触发
                     f_cdma_start <= 1'b1;
-                    b_cdma_start <= 1'b1;
                     buf_start    <= 1'b1;
-                    csc_start    <= 1'b1;
-                    cacc_start   <= 1'b1;
                     obuf_start   <= 1'b1;
                     wdma_start   <= 1'b1;
                     
-                    // 权重首次加载
-                    w_cdma_start <= 1'b1;
-                    w_cdma_busy  <= 1'b1;
-                    w_run_cnt    <= 16'd1; // 首次发枪即计为第 1 轮
+                    if (cfg_op_mode) begin
+                        pool_start  <= 1'b1;
+                        w_cdma_busy <= 1'b0;
+                        w_run_cnt   <= 16'd0;
+                    end else begin
+                        b_cdma_start <= 1'b1;
+                        csc_start    <= 1'b1;
+                        cacc_start   <= 1'b1;
+
+                        w_cdma_start <= 1'b1;
+                        w_cdma_busy  <= 1'b1;
+                        w_run_cnt    <= 16'd1;
+                    end
                 end
 
                 ST_RUNNING: begin

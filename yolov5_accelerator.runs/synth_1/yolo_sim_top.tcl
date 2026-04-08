@@ -74,22 +74,22 @@ set_property ip_cache_permissions {read write} [current_project]
 OPTRACE "Creating in-memory project" END { }
 OPTRACE "Adding files" START { }
 read_verilog -library xil_defaultlib {
-  E:/IEEE2027/yolov5_accelerator/src/cdma/accel_cdma_domain_top.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/B_CDMA/src/b_cdma_recv_data.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/B_CDMA/src/b_cdma_send_cmd.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/B_CDMA/src/b_cdma_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/accel_cdma_domain_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_recv_data.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_send_cmd.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_top.v
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/bbuf_dat_top.v
   E:/IEEE2027/yolov5_accelerator/src/cacc/src/bbuf_prefetcher.v
   E:/IEEE2027/yolov5_accelerator/src/cacc/src/cacc_core.v
   E:/IEEE2027/yolov5_accelerator/src/cacc/src/cacc_requant.v
   E:/IEEE2027/yolov5_accelerator/src/cacc/src/cacc_top.v
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/cbuf_dat_top.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/CDMA/src/cdma_read_req.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/CDMA/src/cdma_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_read_req.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_top.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_8.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_array.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_row.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/CDMA/src/cmda_rx_write.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cmda_rx_write.v
   E:/IEEE2027/yolov5_accelerator/src/CSC/src/csc_top.v
   E:/IEEE2027/yolov5_accelerator/src/mcif/fifo_dff.v
   E:/IEEE2027/yolov5_accelerator/src/mcif/hs_pipe.v
@@ -100,10 +100,11 @@ read_verilog -library xil_defaultlib {
   E:/IEEE2027/yolov5_accelerator/src/mcif/mcif_wr_4w.v
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/mem_domain_top.v
   E:/IEEE2027/yolov5_accelerator/src/obuf/src/obuf_dat_top.v
+  E:/IEEE2027/yolov5_accelerator/src/pool/src/pool_top.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/simd_mac_dsp.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/W_CDMA/src/w_cdma_recv_data.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/W_CDMA/src/w_cdma_send_cmd.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/W_CDMA/src/w_cdma_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/w_cdma_recv_data.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/w_cdma_send_cmd.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/w_cdma_top.v
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/wbuf_top.v
   E:/IEEE2027/yolov5_accelerator/src/WDMA/src/wdma_core.v
   E:/IEEE2027/yolov5_accelerator/src/CSR/yolo_global_fsm.v

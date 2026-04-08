@@ -3,8 +3,8 @@
 # SW Build 5076996 on Wed May 22 18:37:14 MDT 2024
 # IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
 # SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
-# Start of session at: Fri Mar 27 21:33:31 2026
-# Process ID: 13044
+# Start of session at: Wed Apr  8 20:36:46 2026
+# Process ID: 23876
 # Current directory: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/synth_1
 # Command line: vivado.exe -log yolo_sim_top.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source yolo_sim_top.tcl
 # Log file: E:/IEEE2027/yolov5_accelerator/yolov5_accelerator.runs/synth_1/yolo_sim_top.vds
@@ -17,8 +17,8 @@
 # CPU Physical cores:14
 # CPU Logical cores :20
 # Host memory       :16788 MB
-# Swap memory       :13958 MB
-# Total Virtual     :30747 MB
-# Available Virtual :6615 MB
+# Swap memory       :14495 MB
+# Total Virtual     :31284 MB
+# Available Virtual :8114 MB
 #-----------------------------------------------------------
 source yolo_sim_top.tcl -notrace
