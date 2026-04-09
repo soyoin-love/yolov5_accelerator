@@ -57,40 +57,33 @@ module yolo_accel_top #(
     // 权重 CDMA 配置
     input  wire [27:0]                        cfg_wt_total_beats,
     input  wire [31:0]                        cfg_wt_base_addr,
-    input  wire [15:0]                        cfg_wt_total_co_groups,
     input  wire [15:0]                        cfg_wt_coords_per_region,
     input  wire [3:0]                         cfg_wt_active_banks,
     input  wire                               cfg_wt_is_odd_oc,
+    input  wire [31:0]                        cfg_f_base_addr,
+    input  wire [15:0]                        cfg_in_width,
+    input  wire [15:0]                        cfg_in_height,
+    input  wire [15:0]                        cfg_in_ch_groups,
+    input  wire [31:0]                        cfg_b_base_addr,
+    input  wire [15:0]                        cfg_out_channels,
+    input  wire [15:0]                        cfg_out_width,
+    input  wire [15:0]                        cfg_out_height,
+    input  wire [31:0]                        cfg_wdma_base_addr,
+    input  wire [31:0]                        cfg_res_base_addr,
 
     // 特征图 CDMA 配置
-    input  wire [31:0]                        cfg_f_base_addr,
-    input  wire [15:0]                        cfg_f_width,     
-    input  wire [15:0]                        cfg_f_height,    
-    input  wire [15:0]                        cfg_f_ch_groups, 
 
     // 偏置 CDMA 配置
-    input  wire [31:0]                        cfg_b_base_addr,
-    input  wire [15:0]                        cfg_b_out_channels,
 
     // 缓存域维度配置
-    input  wire [CBUF_ADDR_W-1:0]             cfg_buf_max_col_blocks, 
-    input  wire [CBUF_ADDR_W-1:0]             cfg_buf_max_ch_groups,  
-    input  wire [3:0]                         cfg_buf_min_calc_rows,
 
     // 调度器 CSC 配置
-    input  wire [15:0]                        cfg_csc_w_out,        
-    input  wire [15:0]                        cfg_csc_w_out_blocks, 
-    input  wire [15:0]                        cfg_csc_h_out,        
-    input  wire [15:0]                        cfg_csc_w_in,         
-    input  wire [15:0]                        cfg_csc_h_in,         
-    input  wire [15:0]                        cfg_csc_co_groups,    
-    input  wire [15:0]                        cfg_csc_ci_groups,    
     input  wire [3:0]                         cfg_csc_kx,           
     input  wire [3:0]                         cfg_csc_ky,           
-    input  wire [3:0]                         cfg_csc_stride_x,     
-    input  wire [3:0]                         cfg_csc_stride_y,     
-    input  wire [3:0]                         cfg_csc_pad_left,     
-    input  wire [3:0]                         cfg_csc_pad_up,       
+    input  wire [3:0]                         cfg_csc_stride_x,
+    input  wire [3:0]                         cfg_csc_stride_y,
+    input  wire [3:0]                         cfg_csc_pad_left,
+    input  wire [3:0]                         cfg_csc_pad_up,
     input  wire [3:0]                         cfg_csc_active_banks,
     
 
@@ -99,11 +92,8 @@ module yolo_accel_top #(
     input  wire                               cfg_cacc_relu_en,
 
     // 写回 DMA 配置
-    input  wire [31:0]                        cfg_wdma_base_addr,
-    input  wire [15:0]                        cfg_out_ch_groups,
     input  wire [1:0]                         cfg_op_mode,
     input  wire                               cfg_pool_pad_zero,
-    input  wire [31:0]                        cfg_res_base_addr,
     input  wire                               cfg_resadd_relu_en,
     // input  wire [15:0]                        cfg_wdma_total_cols,
     // input  wire [15:0]                        cfg_wdma_total_rows,
@@ -162,6 +152,30 @@ module yolo_accel_top #(
     localparam OP_CONV   = 2'd0;
     localparam OP_POOL   = 2'd1;
     localparam OP_RESADD = 2'd2;
+
+    // 统一在顶层做像素块数和通道组换算，软件只保留一份输入/输出通道语义。
+    // 其中 CSC 使用 16 通道组，OBUF/WDMA/Pool/ResAdd 使用 8 通道组。
+    wire [15:0] cfg_f_width          = cfg_in_width;
+    // 统一在顶层完成像素块数和通道组数换算，软件侧只保留输入/输出的基础语义量。
+    // 其中 CSC 使用 16 通道一组，OBUF/WDMA/Pool/ResAdd/RBUF 使用 8 通道一组。
+
+    wire [15:0] cfg_f_height         = cfg_in_height;
+    wire [15:0] cfg_f_ch_groups      = cfg_in_ch_groups;
+    wire [15:0] cfg_b_out_channels   = cfg_out_channels;
+    wire [15:0] cfg_csc_w_in         = cfg_in_width;
+    wire [15:0] cfg_csc_h_in         = cfg_in_height;
+    wire [15:0] cfg_csc_w_out        = cfg_out_width;
+    wire [15:0] cfg_csc_h_out        = cfg_out_height;
+    wire [15:0] cfg_csc_w_out_blocks = (cfg_out_width + 16'd7)  >> 3;
+    wire [15:0] cfg_csc_ci_groups    = cfg_in_ch_groups;
+    wire [15:0] cfg_csc_co_groups    = (cfg_out_channels + 16'd15) >> 4;
+    wire [15:0] cfg_wt_total_co_groups = cfg_csc_co_groups;
+    wire [15:0] cfg_out_ch_groups    = (cfg_out_channels + 16'd7)  >> 3;
+    wire [CBUF_ADDR_W-1:0] cfg_buf_max_col_blocks = (cfg_in_width  + 16'd7) >> 3;
+    wire [CBUF_ADDR_W-1:0] cfg_buf_max_ch_groups  = cfg_in_ch_groups[CBUF_ADDR_W-1:0];
+    wire [3:0]             cfg_buf_min_calc_rows  = cfg_csc_ky;
+    wire [RBUF_ADDR_W-1:0] cfg_rbuf_max_col_blocks = (cfg_out_width + 16'd7) >> 3;
+    wire [RBUF_ADDR_W-1:0] cfg_rbuf_max_ch_groups  = cfg_out_ch_groups[RBUF_ADDR_W-1:0];
 
     wire                                mcif_rd_req_vld[0:3];
     wire                                mcif_rd_req_rdy[0:3];
@@ -559,8 +573,9 @@ module yolo_accel_top #(
         .clk                (clk),
         .rst_n              (rst_n),
         .start              (rbuf_start),
-        .cfg_max_col_blocks (cfg_buf_max_col_blocks[RBUF_ADDR_W-1:0]),
-        .cfg_max_ch_groups  (cfg_buf_max_ch_groups[RBUF_ADDR_W-1:0]),
+        // RBUF 的地址空间应跟随输出块数/输出 8 通道组，而不是复用 CBUF 的输入配置。
+        .cfg_max_col_blocks (cfg_rbuf_max_col_blocks),
+        .cfg_max_ch_groups  (cfg_rbuf_max_ch_groups),
         .cfg_min_calc_rows  (4'd1),
         .cfg_height         (cfg_csc_h_out),
         .wr_en              (rbuf_wr_en),

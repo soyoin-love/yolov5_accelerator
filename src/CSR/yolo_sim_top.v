@@ -80,12 +80,19 @@ module yolo_sim_top #(
     // 内部配置寄存器组 (CSR)
     // =========================================================================
     reg [31:0]  cfg_f_base_addr, cfg_wt_base_addr, cfg_b_base_addr, cfg_wdma_base_addr, cfg_res_base_addr;
+    reg [15:0]  cfg_in_width, cfg_in_height, cfg_out_width, cfg_out_height;
+    reg [15:0]  cfg_in_ch_groups, cfg_out_channels;
+    // 兼容旧版脚本的影子寄存器：保留写入口，但不再直接作为硬件真实配置下发。
+    reg [15:0]  cfg_f_width, cfg_f_height, cfg_csc_w_in, cfg_csc_h_in;
+    // 旧版影子寄存器仅保留给兼容地址使用，不再参与真实配置下发。
+    reg [15:0]  cfg_f_width, cfg_f_height, cfg_csc_w_in, cfg_csc_h_in;
     reg [15:0]  cfg_f_width, cfg_f_height, cfg_csc_w_in, cfg_csc_h_in;
     reg [15:0]  cfg_csc_w_out, cfg_h_out, cfg_f_ch_groups, cfg_b_out_channels;
     reg [3:0]   cfg_csc_pad_up, cfg_csc_pad_left, cfg_csc_ky, cfg_csc_kx;
     reg [3:0]   cfg_csc_stride_y, cfg_csc_stride_x, cfg_wt_active_banks;
     reg         cfg_wt_is_odd_oc;
-    reg [15:0]  cfg_csc_w_out_blocks, cfg_wt_coords_per_region;
+    reg [15:0]  cfg_wt_coords_per_region;
+    reg [15:0]  cfg_csc_w_out_blocks;
     reg [CBUF_ADDR_W-1:0] cfg_buf_max_ch_groups, cfg_buf_max_col_blocks;
     reg [3:0]   cfg_buf_min_calc_rows;
     reg [27:0]  cfg_wt_total_beats;
@@ -106,11 +113,14 @@ module yolo_sim_top #(
             
             // 复位寄存器至安全默认值 (可根据需要修改)
             cfg_f_base_addr <= 0; cfg_wt_base_addr <= 0; cfg_b_base_addr <= 0; cfg_wdma_base_addr <= 0; cfg_res_base_addr <= 0;
+            cfg_in_width <= 0; cfg_in_height <= 0; cfg_out_width <= 0; cfg_out_height <= 0;
+            cfg_in_ch_groups <= 0; cfg_out_channels <= 0;
             cfg_f_width <= 0; cfg_f_height <= 0; cfg_csc_w_in <= 0; cfg_csc_h_in <= 0;
             cfg_csc_w_out <= 0; cfg_h_out <= 0; cfg_f_ch_groups <= 0; cfg_b_out_channels <= 0;
             cfg_csc_pad_up <= 0; cfg_csc_pad_left <= 0; cfg_csc_ky <= 0; cfg_csc_kx <= 0;
             cfg_csc_stride_y <= 0; cfg_csc_stride_x <= 0; cfg_wt_active_banks <= 0; cfg_wt_is_odd_oc <= 0;
-            cfg_csc_w_out_blocks <= 0; cfg_wt_coords_per_region <= 0;
+            cfg_wt_coords_per_region <= 0;
+            cfg_csc_w_out_blocks <= 0;
             cfg_buf_max_ch_groups <= 0; cfg_buf_max_col_blocks <= 0; cfg_buf_min_calc_rows <= 0;
             cfg_wt_total_beats <= 0; //cfg_wdma_total_cols <= 0; cfg_wdma_total_rows <= 0;
             cfg_cacc_relu_en <= 0; cfg_cacc_b_total_beats <= 0;
@@ -128,14 +138,18 @@ module yolo_sim_top #(
                     8'h14: cfg_wt_base_addr           <= cfg_wdata;
                     8'h18: cfg_b_base_addr            <= cfg_wdata;
                     8'h1C: cfg_wdma_base_addr         <= cfg_wdata;
-                    8'h20: {cfg_f_width, cfg_f_height} <= cfg_wdata;
-                    8'h24: {cfg_csc_w_in, cfg_csc_h_in} <= cfg_wdata;
-                    8'h28: {cfg_csc_w_out, cfg_h_out}  <= cfg_wdata;
-                    8'h2C: {cfg_f_ch_groups, cfg_b_out_channels} <= cfg_wdata;
+                    8'h20: {cfg_in_width, cfg_in_height} <= cfg_wdata;
+                    8'h24: {cfg_in_width, cfg_in_height} <= cfg_wdata;
+                    // 兼容旧版 0x24：仍然接受写入，但语义收敛为统一输入宽高。
+                    8'h24: {cfg_in_width, cfg_in_height} <= cfg_wdata;
+                    8'h28: {cfg_out_width, cfg_out_height} <= cfg_wdata;
+                    8'h2C: {cfg_in_ch_groups, cfg_out_channels} <= cfg_wdata;
                     8'h30: {cfg_csc_pad_up, cfg_csc_pad_left, cfg_csc_ky, cfg_csc_kx} <= cfg_wdata[15:0];
                     8'h34: {cfg_csc_stride_y, cfg_csc_stride_x, cfg_wt_active_banks, cfg_wt_is_odd_oc} <= {cfg_wdata[12:1], cfg_wdata[0]};
-                    8'h38: {cfg_csc_w_out_blocks, cfg_wt_coords_per_region} <= cfg_wdata;
-                    8'h3C: {cfg_buf_max_ch_groups, cfg_buf_max_col_blocks} <= {cfg_wdata[25:16], cfg_wdata[9:0]};
+                    8'h38: cfg_wt_coords_per_region   <= cfg_wdata[15:0];
+                    // 输出块数由硬件自动换算，软件侧只保留权重坐标总数。
+                    8'h38: cfg_wt_coords_per_region   <= cfg_wdata[15:0];
+                    8'h3C: ;
                     8'h3E: cfg_buf_min_calc_rows      <= cfg_wdata[3:0]; // 拆分地址降低打包复杂度
                     8'h40: cfg_wt_total_beats         <= cfg_wdata[27:0];
                     //8'h44: {cfg_wdma_total_cols, cfg_wdma_total_rows} <= cfg_wdata;
@@ -164,7 +178,7 @@ module yolo_sim_top #(
         .ap_start         (ap_start),
         .ap_done          (ap_done),
         .ap_idle          (ap_idle),
-        .cfg_h_out        (cfg_h_out),
+        .cfg_h_out        (cfg_out_height),
         .cfg_op_mode      (cfg_op_mode),
 
         // Start Outputs
@@ -216,29 +230,20 @@ module yolo_sim_top #(
         // 配置寄存器连线
         .cfg_wt_total_beats       (cfg_wt_total_beats),
         .cfg_wt_base_addr         (cfg_wt_base_addr),
-        .cfg_wt_total_co_groups   (cfg_wt_total_co_groups),
         .cfg_wt_coords_per_region (cfg_wt_coords_per_region),
         .cfg_wt_active_banks      (cfg_wt_active_banks),
         .cfg_wt_is_odd_oc         (cfg_wt_is_odd_oc),
         
         .cfg_f_base_addr          (cfg_f_base_addr),
-        .cfg_f_width              (cfg_f_width),
-        .cfg_f_height             (cfg_f_height),
-        .cfg_f_ch_groups          (cfg_f_ch_groups),
+        .cfg_in_width             (cfg_in_width),
+        .cfg_in_height            (cfg_in_height),
+        .cfg_in_ch_groups         (cfg_in_ch_groups),
         
         .cfg_b_base_addr          (cfg_b_base_addr),
-        .cfg_b_out_channels       (cfg_b_out_channels),
-        .cfg_buf_max_col_blocks   (cfg_buf_max_col_blocks),
-        .cfg_buf_max_ch_groups    (cfg_buf_max_ch_groups),
-        .cfg_buf_min_calc_rows    (cfg_buf_min_calc_rows),
+        .cfg_out_channels         (cfg_out_channels),
         
-        .cfg_csc_w_out            (cfg_csc_w_out),
-        .cfg_csc_w_out_blocks     (cfg_csc_w_out_blocks),
-        .cfg_csc_h_out            (cfg_h_out),
-        .cfg_csc_w_in             (cfg_csc_w_in),
-        .cfg_csc_h_in             (cfg_csc_h_in),
-        .cfg_csc_co_groups        (cfg_csc_co_groups),
-        .cfg_csc_ci_groups        (cfg_csc_ci_groups),
+        .cfg_out_width            (cfg_out_width),
+        .cfg_out_height           (cfg_out_height),
         .cfg_csc_kx               (cfg_csc_kx),
         .cfg_csc_ky               (cfg_csc_ky),
         .cfg_csc_stride_x         (cfg_csc_stride_x),
@@ -251,7 +256,6 @@ module yolo_sim_top #(
         .cfg_cacc_relu_en         (cfg_cacc_relu_en),
         
         .cfg_wdma_base_addr       (cfg_wdma_base_addr),
-        .cfg_out_ch_groups        (cfg_out_ch_grps),
         .cfg_op_mode              (cfg_op_mode),
         .cfg_pool_pad_zero        (cfg_pool_pad_zero),
         .cfg_res_base_addr        (cfg_res_base_addr),
