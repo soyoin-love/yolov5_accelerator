@@ -13,7 +13,7 @@ module yolo_global_fsm (
     
     // 网络维度参数
     input  wire [15:0] cfg_h_out,     // 输出特征图总行数，用于比对权重重载次数
-    input  wire        cfg_op_mode,   // 0: convolution, 1: pooling
+    input  wire [1:0]  cfg_op_mode,   // 0: convolution, 1: pooling, 2: residual add
 
     // ==========================================
     // 发往各子模块的发令枪 (Start Signals)
@@ -25,6 +25,9 @@ module yolo_global_fsm (
     output reg         csc_start,
     output reg         cacc_start,
     output reg         pool_start,
+    output reg         r_cdma_start,
+    output reg         rbuf_start,
+    output reg         resadd_start,
     output reg         obuf_start,
     output reg         wdma_start,
 
@@ -44,6 +47,10 @@ module yolo_global_fsm (
     localparam ST_INIT_FIRE = 3'd1;
     localparam ST_RUNNING   = 3'd2;
     localparam ST_WAIT_DONE = 3'd3;
+
+    localparam OP_CONV   = 2'd0;
+    localparam OP_POOL   = 2'd1;
+    localparam OP_RESADD = 2'd2;
 
     reg [2:0] state, next_state;
 
@@ -102,6 +109,9 @@ module yolo_global_fsm (
             csc_start        <= 1'b0;
             cacc_start       <= 1'b0;
             pool_start       <= 1'b0;
+            r_cdma_start     <= 1'b0;
+            rbuf_start       <= 1'b0;
+            resadd_start     <= 1'b0;
             obuf_start       <= 1'b0;
             wdma_start       <= 1'b0;
             
@@ -117,12 +127,15 @@ module yolo_global_fsm (
             csc_start    <= 1'b0;
             cacc_start   <= 1'b0;
             pool_start   <= 1'b0;
+            r_cdma_start <= 1'b0;
+            rbuf_start   <= 1'b0;
+            resadd_start <= 1'b0;
             obuf_start   <= 1'b0;
             wdma_start   <= 1'b0;
             ap_done      <= 1'b0;
 
             // 监听 CSC 脉冲并存入挂起寄存器 (防止脉冲丢失)
-            if (state == ST_RUNNING && !cfg_op_mode && csc_row_done) begin  //不为卷积模式不触发权重读取
+            if (state == ST_RUNNING && (cfg_op_mode == OP_CONV) && csc_row_done) begin
                 w_reload_pending <= 1'b1;
             end
 
@@ -147,10 +160,17 @@ module yolo_global_fsm (
                     obuf_start   <= 1'b1;
                     wdma_start   <= 1'b1;
                     
-                    if (cfg_op_mode) begin
+                    if (cfg_op_mode == OP_POOL) begin
                         pool_start  <= 1'b1;
                         w_cdma_busy <= 1'b0;
                         w_run_cnt   <= 16'd0;
+                    end else if (cfg_op_mode == OP_RESADD) begin
+                        // ResAdd only starts feature streams, RBUF, OBUF and WDMA.
+                        r_cdma_start <= 1'b1;
+                        rbuf_start   <= 1'b1;
+                        resadd_start <= 1'b1;
+                        w_cdma_busy  <= 1'b0;
+                        w_run_cnt    <= 16'd0;
                     end else begin
                         b_cdma_start <= 1'b1;
                         csc_start    <= 1'b1;

@@ -20,6 +20,8 @@ module yolo_accel_top #(
     parameter CBUF_ADDR_W         = 10,
     parameter BBUF_ADDR_W         = 9,
     parameter OBUF_ADDR_W         = 9,
+    parameter RBUF_ADDR_W         = 9,
+    parameter RBUF_ROW_BLOCKS     = 2,
     
     parameter MAC_LATENCY         = 7,
     parameter TREE_LATENCY        = 3,
@@ -39,6 +41,9 @@ module yolo_accel_top #(
     input  wire                               csc_start,
     input  wire                               cacc_start,
     input  wire                               pool_start,
+    input  wire                               r_cdma_start,
+    input  wire                               rbuf_start,
+    input  wire                               resadd_start,
     input  wire                               obuf_start,
     input  wire                               wdma_start,
 
@@ -95,9 +100,11 @@ module yolo_accel_top #(
 
     // 写回 DMA 配置
     input  wire [31:0]                        cfg_wdma_base_addr,
-    input  wire [15:0]                        cfg_out_ch_groups, 
-    input  wire                               cfg_op_mode,
+    input  wire [15:0]                        cfg_out_ch_groups,
+    input  wire [1:0]                         cfg_op_mode,
     input  wire                               cfg_pool_pad_zero,
+    input  wire [31:0]                        cfg_res_base_addr,
+    input  wire                               cfg_resadd_relu_en,
     // input  wire [15:0]                        cfg_wdma_total_cols,
     // input  wire [15:0]                        cfg_wdma_total_rows,
 
@@ -152,6 +159,10 @@ module yolo_accel_top #(
     // =========================================================================
 
     // --- MCIF 读通道线网 ---
+    localparam OP_CONV   = 2'd0;
+    localparam OP_POOL   = 2'd1;
+    localparam OP_RESADD = 2'd2;
+
     wire                                mcif_rd_req_vld[0:3];
     wire                                mcif_rd_req_rdy[0:3];
     wire [39:0]                         mcif_rd_req_pd [0:3];
@@ -215,6 +226,32 @@ module yolo_accel_top #(
     wire [3:0]                          pool_cbuf_rd_free_num;
     wire                                pool_done;
 
+    wire [7:0]                          resadd_cbuf_rd_en;
+    wire [15:0]                         resadd_cbuf_rd_row;
+    wire [15:0]                         resadd_cbuf_rd_col_align;
+    wire [15:0]                         resadd_cbuf_rd_ch_grp;
+    wire                                resadd_cbuf_rd_row_free;
+    wire [3:0]                          resadd_cbuf_rd_free_num;
+
+    // RBUF is an independent residual-input line buffer; it is only read by ResAdd.
+    wire                                rbuf_wr_en;
+    wire [15:0]                         rbuf_wr_row;
+    wire [15:0]                         rbuf_wr_col;
+    wire [15:0]                         rbuf_wr_ch_grp;
+    wire [2*TK_IN*N-1:0]                rbuf_wr_dat;
+    wire                                rbuf_wr_pending;
+    wire                                rbuf_wr_row_done;
+    wire                                rbuf_can_write;
+    wire [7:0]                          resadd_rbuf_rd_en;
+    wire [15:0]                         resadd_rbuf_rd_row;
+    wire [15:0]                         resadd_rbuf_rd_col_align;
+    wire [15:0]                         resadd_rbuf_rd_ch_grp;
+    wire                                resadd_rbuf_rd_row_free;
+    wire [3:0]                          resadd_rbuf_rd_free_num;
+    wire                                rbuf_can_read;
+    wire                                rbuf_rd_dat_vld;
+    wire [BANK_NUM*TK_IN*N-1:0]         rbuf_rd_dat_out;
+
     // --- BBUF 交互线网 ---
     wire [BANK_NUM-1:0]                 bbuf_wr_en;
     wire [BBUF_ADDR_W-1:0]              bbuf_wr_addr;
@@ -249,6 +286,10 @@ module yolo_accel_top #(
     wire                                pool_obuf_wr_vld;
     wire [2*BANK_NUM-1:0]               pool_obuf_wr_mask;
     wire [BANK_NUM*128-1:0]             pool_obuf_wr_dat;
+    wire                                resadd_obuf_wr_vld;
+    wire [2*BANK_NUM-1:0]               resadd_obuf_wr_mask;
+    wire [BANK_NUM*128-1:0]             resadd_obuf_wr_dat;
+    wire                                resadd_done;
     wire                                obuf_wr_vld_mux;
     wire [2*BANK_NUM-1:0]               obuf_wr_mask_mux;
     wire [BANK_NUM*128-1:0]             obuf_wr_dat_mux;
@@ -263,17 +304,27 @@ module yolo_accel_top #(
     wire [OBUF_ADDR_W:0]                obuf_used_lines_g1;
     wire [3:0]                          cbuf_min_calc_rows_mux;
 
-    assign cbuf_rd_en        = cfg_op_mode ? pool_cbuf_rd_en        : csc_cbuf_rd_en;
-    assign cbuf_rd_row       = cfg_op_mode ? pool_cbuf_rd_row       : csc_cbuf_rd_row;
-    assign cbuf_rd_col_align = cfg_op_mode ? pool_cbuf_rd_col_align : csc_cbuf_rd_col_align;
-    assign cbuf_rd_ch_grp    = cfg_op_mode ? pool_cbuf_rd_ch_grp    : csc_cbuf_rd_ch_grp;
-    assign cbuf_rd_row_free  = cfg_op_mode ? pool_cbuf_rd_row_free  : csc_cbuf_rd_row_free;
-    assign cbuf_rd_free_num  = cfg_op_mode ? pool_cbuf_rd_free_num  : csc_cbuf_rd_free_num;
+    assign cbuf_rd_en        = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_en        :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_en          : csc_cbuf_rd_en;
+    assign cbuf_rd_row       = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_row       :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_row         : csc_cbuf_rd_row;
+    assign cbuf_rd_col_align = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_col_align :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_col_align   : csc_cbuf_rd_col_align;
+    assign cbuf_rd_ch_grp    = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_ch_grp    :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_ch_grp      : csc_cbuf_rd_ch_grp;
+    assign cbuf_rd_row_free  = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_row_free  :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_row_free    : csc_cbuf_rd_row_free;
+    assign cbuf_rd_free_num  = (cfg_op_mode == OP_RESADD) ? resadd_cbuf_rd_free_num  :
+                               (cfg_op_mode == OP_POOL)   ? pool_cbuf_rd_free_num    : csc_cbuf_rd_free_num;
 
-    assign obuf_wr_vld_mux  = cfg_op_mode ? pool_obuf_wr_vld  : cacc_obuf_wr_vld;
-    assign obuf_wr_mask_mux = cfg_op_mode ? pool_obuf_wr_mask : cacc_obuf_wr_mask;
-    assign obuf_wr_dat_mux  = cfg_op_mode ? pool_obuf_wr_dat  : cacc_obuf_wr_dat;
-    assign cbuf_min_calc_rows_mux = cfg_op_mode ? 4'd5 : cfg_buf_min_calc_rows;
+    assign obuf_wr_vld_mux   = (cfg_op_mode == OP_RESADD) ? resadd_obuf_wr_vld  :
+                               (cfg_op_mode == OP_POOL)   ? pool_obuf_wr_vld    : cacc_obuf_wr_vld;
+    assign obuf_wr_mask_mux  = (cfg_op_mode == OP_RESADD) ? resadd_obuf_wr_mask :
+                               (cfg_op_mode == OP_POOL)   ? pool_obuf_wr_mask   : cacc_obuf_wr_mask;
+    assign obuf_wr_dat_mux   = (cfg_op_mode == OP_RESADD) ? resadd_obuf_wr_dat  :
+                               (cfg_op_mode == OP_POOL)   ? pool_obuf_wr_dat    : cacc_obuf_wr_dat;
+    assign cbuf_min_calc_rows_mux = (cfg_op_mode == OP_POOL)   ? 4'd5 :
+                                    (cfg_op_mode == OP_RESADD) ? 4'd1 : cfg_buf_min_calc_rows;
 
     // =========================================================================
     // A. 互联矩阵层 (MCIF)
@@ -294,9 +345,9 @@ module yolo_accel_top #(
         // R Channel 2 (Bias)
         .rd_req_vld2(mcif_rd_req_vld[2]), .rd_req_rdy2(mcif_rd_req_rdy[2]), .rd_req_pd2(mcif_rd_req_pd[2]),
         .rd_resp_vld2(mcif_rd_resp_vld[2]), .rd_resp_rdy2(mcif_rd_resp_rdy[2]), .rd_resp_pd2(mcif_rd_resp_pd[2]),
-        // R Channel 3 (Unused, Tie-off)
-        .rd_req_vld3(1'b0), .rd_req_rdy3(mcif_rd_req_rdy[3]), .rd_req_pd3(40'd0),
-        .rd_resp_vld3(mcif_rd_resp_vld[3]), .rd_resp_rdy3(1'b1), .rd_resp_pd3(mcif_rd_resp_pd[3]),
+        // R Channel 3 (Residual feature)
+        .rd_req_vld3(mcif_rd_req_vld[3]), .rd_req_rdy3(mcif_rd_req_rdy[3]), .rd_req_pd3(mcif_rd_req_pd[3]),
+        .rd_resp_vld3(mcif_rd_resp_vld[3]), .rd_resp_rdy3(mcif_rd_resp_rdy[3]), .rd_resp_pd3(mcif_rd_resp_pd[3]),
 
         // W Channel 0 (WDMA)
         .wr_req_vld0(mcif_wr_req_vld[0]), .wr_req_rdy0(mcif_wr_req_rdy[0]), .wr_req_pd0(mcif_wr_req_pd[0]), .wr_rsp_complete0(mcif_wr_rsp_comp[0]),
@@ -400,6 +451,38 @@ module yolo_accel_top #(
         .bbuf_wr_dat            (bbuf_wr_dat)
     );
 
+    // Residual feature DMA reuses the feature CDMA data layout:
+    // DDR beat = 2 pixels * 8 INT8 channels, written into the independent RBUF.
+    r_cdma_top #(
+        .ROW_BLOCKS (RBUF_ROW_BLOCKS),
+        .TK_IN      (TK_IN),
+        .N          (N)
+    ) u_r_cdma (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .start            (r_cdma_start),
+        .cfg_base_addr    (cfg_res_base_addr),
+        .cfg_width        (cfg_csc_w_out),
+        .cfg_height       (cfg_csc_h_out),
+        .cfg_ch_groups    (cfg_out_ch_groups),
+        .rd_row_free      (resadd_rbuf_rd_row_free),
+        .rd_free_num      (resadd_rbuf_rd_free_num),
+        .rbuf_can_write   (rbuf_can_write),
+        .mcif_req_rdy     (mcif_rd_req_rdy[3]),
+        .mcif_req_vld     (mcif_rd_req_vld[3]),
+        .mcif_req_pd      (mcif_rd_req_pd[3]),
+        .mcif_rx_vld      (mcif_rd_resp_vld[3]),
+        .mcif_rx_dat      (mcif_rd_resp_pd[3][2*TK_IN*N-1:0]),
+        .mcif_rx_rdy      (mcif_rd_resp_rdy[3]),
+        .wr_en            (rbuf_wr_en),
+        .wr_row           (rbuf_wr_row),
+        .wr_col           (rbuf_wr_col),
+        .wr_ch_grp        (rbuf_wr_ch_grp),
+        .wr_dat           (rbuf_wr_dat),
+        .wr_pending       (rbuf_wr_pending),
+        .wr_row_done      (rbuf_wr_row_done)
+    );
+
     // =========================================================================
     // C. 片上缓存池层 (Memory Domain)
     // =========================================================================
@@ -464,6 +547,39 @@ module yolo_accel_top #(
         .bbuf_cacc_rd_addr      (bbuf_rd_addr),
         .bbuf_cacc_rd_vld       (bbuf_rd_vld),
         .bbuf_cacc_rd_dat       (bbuf_rd_dat)
+    );
+
+    rbuf_dat_top #(
+        .BANK_NUM   (BANK_NUM),
+        .TK_IN      (TK_IN),
+        .N          (N),
+        .ADDR_WIDTH (RBUF_ADDR_W),
+        .ROW_BLOCKS (RBUF_ROW_BLOCKS)
+    ) u_rbuf (
+        .clk                (clk),
+        .rst_n              (rst_n),
+        .start              (rbuf_start),
+        .cfg_max_col_blocks (cfg_buf_max_col_blocks[RBUF_ADDR_W-1:0]),
+        .cfg_max_ch_groups  (cfg_buf_max_ch_groups[RBUF_ADDR_W-1:0]),
+        .cfg_min_calc_rows  (4'd1),
+        .cfg_height         (cfg_csc_h_out),
+        .wr_en              (rbuf_wr_en),
+        .wr_row             (rbuf_wr_row),
+        .wr_col             (rbuf_wr_col),
+        .wr_ch_grp          (rbuf_wr_ch_grp),
+        .wr_dat             (rbuf_wr_dat),
+        .wr_pending         (rbuf_wr_pending),
+        .wr_row_done        (rbuf_wr_row_done),
+        .rbuf_can_write     (rbuf_can_write),
+        .rd_en              (resadd_rbuf_rd_en),
+        .rd_row             (resadd_rbuf_rd_row),
+        .rd_col_align       (resadd_rbuf_rd_col_align),
+        .rd_ch_grp          (resadd_rbuf_rd_ch_grp),
+        .rd_row_free        (resadd_rbuf_rd_row_free),
+        .rd_free_num        (resadd_rbuf_rd_free_num),
+        .rbuf_can_read      (rbuf_can_read),
+        .rd_dat_vld         (rbuf_rd_dat_vld),
+        .rd_dat_out         (rbuf_rd_dat_out)
     );
 
     // =========================================================================
@@ -571,6 +687,43 @@ module yolo_accel_top #(
         .obuf_wr_mask(pool_obuf_wr_mask),
         .obuf_wr_dat(pool_obuf_wr_dat),
         .pool_done(pool_done)
+    );
+
+    resadd_top #(
+        .BANK_NUM(BANK_NUM),
+        .TK_IN(TK_IN),
+        .N(N)
+    ) u_resadd (
+        .clk(clk),
+        .rst_n(rst_n),
+        .start(resadd_start),
+        .cfg_w_out(cfg_csc_w_out),
+        .cfg_h_out(cfg_csc_h_out),
+        .cfg_ch_groups(cfg_out_ch_groups),
+        .cfg_relu_en(cfg_resadd_relu_en),
+        .cbuf_can_read(cbuf_can_read),
+        .cbuf_rd_en(resadd_cbuf_rd_en),
+        .cbuf_rd_row(resadd_cbuf_rd_row),
+        .cbuf_rd_col_align(resadd_cbuf_rd_col_align),
+        .cbuf_rd_ch_grp(resadd_cbuf_rd_ch_grp),
+        .cbuf_rd_row_free(resadd_cbuf_rd_row_free),
+        .cbuf_rd_free_num(resadd_cbuf_rd_free_num),
+        .cbuf_rd_dat_vld(cbuf_rd_dat_vld),
+        .cbuf_rd_dat(cbuf_rd_dat_out),
+        .rbuf_can_read(rbuf_can_read),
+        .rbuf_rd_en(resadd_rbuf_rd_en),
+        .rbuf_rd_row(resadd_rbuf_rd_row),
+        .rbuf_rd_col_align(resadd_rbuf_rd_col_align),
+        .rbuf_rd_ch_grp(resadd_rbuf_rd_ch_grp),
+        .rbuf_rd_row_free(resadd_rbuf_rd_row_free),
+        .rbuf_rd_free_num(resadd_rbuf_rd_free_num),
+        .rbuf_rd_dat_vld(rbuf_rd_dat_vld),
+        .rbuf_rd_dat(rbuf_rd_dat_out),
+        .obuf_can_write(obuf_can_write),
+        .obuf_wr_vld(resadd_obuf_wr_vld),
+        .obuf_wr_mask(resadd_obuf_wr_mask),
+        .obuf_wr_dat(resadd_obuf_wr_dat),
+        .resadd_done(resadd_done)
     );
 
     // =========================================================================

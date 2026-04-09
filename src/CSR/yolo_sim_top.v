@@ -72,14 +72,14 @@ module yolo_sim_top #(
     // =========================================================================
     reg         ap_start;
     wire        w_cdma_start, f_cdma_start, b_cdma_start, buf_start;
-    wire        csc_start, cacc_start, pool_start, obuf_start, wdma_start;
+    wire        csc_start, cacc_start, pool_start, r_cdma_start, rbuf_start, resadd_start, obuf_start, wdma_start;
     
     wire        w_cdma_done, b_cdma_done, csc_row_done, wdma_done;
 
     // =========================================================================
     // 内部配置寄存器组 (CSR)
     // =========================================================================
-    reg [31:0]  cfg_f_base_addr, cfg_wt_base_addr, cfg_b_base_addr, cfg_wdma_base_addr;
+    reg [31:0]  cfg_f_base_addr, cfg_wt_base_addr, cfg_b_base_addr, cfg_wdma_base_addr, cfg_res_base_addr;
     reg [15:0]  cfg_f_width, cfg_f_height, cfg_csc_w_in, cfg_csc_h_in;
     reg [15:0]  cfg_csc_w_out, cfg_h_out, cfg_f_ch_groups, cfg_b_out_channels;
     reg [3:0]   cfg_csc_pad_up, cfg_csc_pad_left, cfg_csc_ky, cfg_csc_kx;
@@ -94,8 +94,9 @@ module yolo_sim_top #(
     reg [15:0]  cfg_cacc_b_total_beats;
     reg [15:0]  cfg_csc_co_groups, cfg_csc_ci_groups, cfg_wt_total_co_groups;
     reg [15:0]  cfg_out_ch_grps;
-    reg         cfg_op_mode;
+    reg [1:0]   cfg_op_mode;
     reg         cfg_pool_pad_zero;
+    reg         cfg_resadd_relu_en;
 
     // 极简 CSR 写入逻辑
     always @(posedge clk or negedge rst_n) begin
@@ -104,7 +105,7 @@ module yolo_sim_top #(
             cfg_ack  <= 1'b0;
             
             // 复位寄存器至安全默认值 (可根据需要修改)
-            cfg_f_base_addr <= 0; cfg_wt_base_addr <= 0; cfg_b_base_addr <= 0; cfg_wdma_base_addr <= 0;
+            cfg_f_base_addr <= 0; cfg_wt_base_addr <= 0; cfg_b_base_addr <= 0; cfg_wdma_base_addr <= 0; cfg_res_base_addr <= 0;
             cfg_f_width <= 0; cfg_f_height <= 0; cfg_csc_w_in <= 0; cfg_csc_h_in <= 0;
             cfg_csc_w_out <= 0; cfg_h_out <= 0; cfg_f_ch_groups <= 0; cfg_b_out_channels <= 0;
             cfg_csc_pad_up <= 0; cfg_csc_pad_left <= 0; cfg_csc_ky <= 0; cfg_csc_kx <= 0;
@@ -115,7 +116,7 @@ module yolo_sim_top #(
             cfg_cacc_relu_en <= 0; cfg_cacc_b_total_beats <= 0;
             cfg_csc_co_groups <= 0; cfg_csc_ci_groups <= 0; cfg_wt_total_co_groups <= 0;
             cfg_out_ch_grps <= 0;
-            cfg_op_mode <= 1'b0; cfg_pool_pad_zero <= 1'b0;
+            cfg_op_mode <= 2'd0; cfg_pool_pad_zero <= 1'b0; cfg_resadd_relu_en <= 1'b0;
         end else begin
             ap_start <= 1'b0; // 保证 start 仅维持一拍脉冲
             
@@ -141,7 +142,12 @@ module yolo_sim_top #(
                     8'h48: {cfg_cacc_relu_en, cfg_cacc_b_total_beats} <= {cfg_wdata[16], cfg_wdata[15:0]};
                     8'h4C: {cfg_csc_co_groups, cfg_csc_ci_groups} <= cfg_wdata;
                     8'h50: {cfg_wt_total_co_groups,cfg_out_ch_grps}     <= cfg_wdata;
-                    8'h54: {cfg_pool_pad_zero, cfg_op_mode} <= cfg_wdata[1:0];
+                    8'h54: begin
+                        cfg_op_mode        <= cfg_wdata[1:0]; // 0: conv, 1: pool, 2: residual add
+                        cfg_pool_pad_zero  <= cfg_wdata[2];
+                        cfg_resadd_relu_en <= cfg_wdata[3];
+                    end
+                    8'h58: cfg_res_base_addr         <= cfg_wdata;
                 endcase
             end else if (!cfg_req) begin
                 cfg_ack <= 1'b0;
@@ -169,6 +175,9 @@ module yolo_sim_top #(
         .csc_start        (csc_start),
         .cacc_start       (cacc_start),
         .pool_start       (pool_start),
+        .r_cdma_start     (r_cdma_start),
+        .rbuf_start       (rbuf_start),
+        .resadd_start     (resadd_start),
         .obuf_start       (obuf_start),
         .wdma_start       (wdma_start),
 
@@ -194,6 +203,9 @@ module yolo_sim_top #(
         .csc_start                (csc_start),
         .cacc_start               (cacc_start),
         .pool_start               (pool_start),
+        .r_cdma_start             (r_cdma_start),
+        .rbuf_start               (rbuf_start),
+        .resadd_start             (resadd_start),
         .obuf_start               (obuf_start),
         .wdma_start               (wdma_start),
         .w_cdma_done              (w_cdma_done),
@@ -242,6 +254,8 @@ module yolo_sim_top #(
         .cfg_out_ch_groups        (cfg_out_ch_grps),
         .cfg_op_mode              (cfg_op_mode),
         .cfg_pool_pad_zero        (cfg_pool_pad_zero),
+        .cfg_res_base_addr        (cfg_res_base_addr),
+        .cfg_resadd_relu_en       (cfg_resadd_relu_en),
         // .cfg_wdma_total_cols      (cfg_wdma_total_cols),
         // .cfg_wdma_total_rows      (cfg_wdma_total_rows),
 
