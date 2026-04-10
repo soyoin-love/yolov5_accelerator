@@ -43,10 +43,10 @@ module b_cdma_send_cmd #(
 
     assign rd_req_vld = working;
 
-    // 地址累加逻辑：起始地址 + 已完成的突发次数 * 每次突发的字节数 [cite: 243]
+    // 地址累加逻辑：起始地址 + 已完成的突发次数 * 每次突发的字节数 
     wire [31:0] cmd_addr = cfg_b_base_addr + (burst_cnt << (4 + LOG2_MAX_BURST_LEN));
     
-    // 长度计算：最后一次取余数，其余取最大突发长度 [cite: 244]
+    // 长度计算：最后一次取余数，其余取最大突发长度 
     wire [LOG2_MAX_BURST_LEN-1:0] cmd_len = 
         burst_is_last ? (cfg_b_total_beats[LOG2_MAX_BURST_LEN-1:0] - 1'b1) : (MAX_BURST_LEN - 1);
 

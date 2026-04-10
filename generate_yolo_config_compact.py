@@ -1,10 +1,28 @@
-import argparse
-import math
+﻿import argparse
 
 
 def ceil_div(value, factor):
     """向上取整除法。"""
     return (value + factor - 1) // factor
+
+
+def calc_feature_layout(width, ch_groups, bytes_per_beat=16):
+    """按当前特征图 DDR 排布推导默认 stride。
+
+    DDR 中一拍为 128bit，即 16 字节，对应 2 个空间位置。
+    当前工程默认布局为：
+    1. 同一行内先写完整个通道组的所有 beat
+    2. 再切到同一行的下一个通道组
+    3. 最后切到下一行
+    """
+    beats_per_row = ceil_div(width, 2)
+    surface_stride = beats_per_row * bytes_per_beat
+    line_stride = surface_stride * ch_groups
+    return {
+        "beats_per_row": beats_per_row,
+        "surface_stride": surface_stride,
+        "line_stride": line_stride,
+    }
 
 
 def generate_yolo_config(
@@ -28,27 +46,51 @@ def generate_yolo_config(
     b_base=0x00040000,
     o_base=0x00060000,
     res_base=0x00080000,
+    cat_en=0,
+    cat_src1_base=0x00000000,
+    cat_src0_ch_groups=0,
+    cat_src0_line_stride=0,
+    cat_src1_line_stride=0,
+    cat_src0_surface_stride=0,
+    cat_src1_surface_stride=0,
 ):
-    # 输出宽高仍放在软件层推导，像素块数与通道组数交给硬件内部自动换算。
+    # 输出宽高依然由软件根据卷积参数推导。
     W_out = (W_in - Kx + 2 * Px) // Sx + 1
     H_out = (H_in - Ky + 2 * Py) // Sy + 1
 
-    # 软件侧只保留输入 8 通道组与输出总通道数这两份基础语义。
+    # 软件层只保留总输入通道组和总输出通道数这两个基础语义。
     ci_groups = ceil_div(C_in, 8)
-
-    # 权重 beat、偏置 beat、尾组有效 bank 这些复杂量继续由软件计算。
     co_groups_x16 = ceil_div(C_out, 16)
+
+    # 这些和权重打包强相关的量继续放在软件层计算。
     coords_per_region = ci_groups * Kx * Ky
     rem_cout = C_out % 16
-    active_banks = 8 if rem_cout == 0 else math.ceil(rem_cout / 2.0)
+    active_banks = 8 if rem_cout == 0 else ceil_div(rem_cout, 2)
     is_odd_oc = 1 if (C_out % 2 != 0) else 0
-    b_total_beats = math.ceil(C_out / 2.0)
+    b_total_beats = ceil_div(C_out, 2)
 
     if co_groups_x16 > 1:
         wt_total_beats = (co_groups_x16 - 1) * coords_per_region * 8 + coords_per_region * active_banks
     else:
         wt_total_beats = coords_per_region * active_banks
 
+    full_layout = calc_feature_layout(W_in, ci_groups)
+
+    cat_en = 1 if cat_en else 0
+    if cat_en:
+        if cat_src0_ch_groups <= 0 or cat_src0_ch_groups >= ci_groups:
+            raise ValueError(
+                "cat_src0_ch_groups must be in [1, total_input_groups - 1] when cat_en=1"
+            )
+        cat_src1_ch_groups = ci_groups - cat_src0_ch_groups
+        src0_layout = calc_feature_layout(W_in, cat_src0_ch_groups)
+        src1_layout = calc_feature_layout(W_in, cat_src1_ch_groups)
+    else:
+        cat_src1_ch_groups = 0
+        src0_layout = calc_feature_layout(W_in, ci_groups)
+        src1_layout = {"beats_per_row": 0, "surface_stride": 0, "line_stride": 0}
+
+    # stride 配置默认为 0，表示让硬件按标准连续布局自动推导。
     config_dict = {
         0x10: f_base,
         0x14: w_base,
@@ -64,6 +106,12 @@ def generate_yolo_config(
         0x48: (relu_en << 16) | b_total_beats,
         0x54: (resadd_relu_en << 3) | (pool_pad_zero << 2) | (op_mode & 0x3),
         0x58: res_base,
+        0x5C: cat_src1_base,
+        0x60: ((cat_en & 0x1) << 16) | (cat_src0_ch_groups & 0xFFFF),
+        0x64: cat_src0_line_stride,
+        0x68: cat_src1_line_stride,
+        0x6C: cat_src0_surface_stride,
+        0x70: cat_src1_surface_stride,
     }
 
     with open(filename, "w", encoding="utf-8") as f:
@@ -80,6 +128,12 @@ def generate_yolo_config(
         "is_odd_oc": is_odd_oc,
         "b_total_beats": b_total_beats,
         "wt_total_beats": wt_total_beats,
+        "cat_en": cat_en,
+        "cat_src0_ch_groups": cat_src0_ch_groups,
+        "cat_src1_ch_groups": cat_src1_ch_groups,
+        "full_layout": full_layout,
+        "src0_layout": src0_layout,
+        "src1_layout": src1_layout,
         "config_dict": config_dict,
     }
 
@@ -107,6 +161,15 @@ def build_argparser():
     parser.add_argument("--b_base", type=lambda x: int(x, 0), default=0x00040000)
     parser.add_argument("--o_base", type=lambda x: int(x, 0), default=0x00060000)
     parser.add_argument("--res_base", type=lambda x: int(x, 0), default=0x00080000)
+
+    # virtual concat 配置，默认保持关闭。
+    parser.add_argument("--cat_en", type=int, default=0)
+    parser.add_argument("--cat_src1_base", type=lambda x: int(x, 0), default=0x00000000)
+    parser.add_argument("--cat_src0_ch_groups", type=int, default=0)
+    parser.add_argument("--cat_src0_line_stride", type=lambda x: int(x, 0), default=0)
+    parser.add_argument("--cat_src1_line_stride", type=lambda x: int(x, 0), default=0)
+    parser.add_argument("--cat_src0_surface_stride", type=lambda x: int(x, 0), default=0)
+    parser.add_argument("--cat_src1_surface_stride", type=lambda x: int(x, 0), default=0)
     return parser
 
 
@@ -114,6 +177,7 @@ def main():
     """命令行入口。"""
     args = build_argparser().parse_args()
     result = generate_yolo_config(**vars(args))
+
     print(f"Generated config file: {args.filename}")
     print(
         "Summary: "
@@ -123,6 +187,16 @@ def main():
         f"co_groups_x16={result['co_groups_x16']}, "
         f"wt_total_beats={result['wt_total_beats']}"
     )
+
+    if result["cat_en"]:
+        print(
+            "Concat: "
+            f"src0_groups={result['cat_src0_ch_groups']}, "
+            f"src1_groups={result['cat_src1_ch_groups']}, "
+            f"auto_src0_line_stride=0x{result['src0_layout']['line_stride']:08X}, "
+            f"auto_src1_line_stride=0x{result['src1_layout']['line_stride']:08X}, "
+            f"auto_surface_stride=0x{result['src0_layout']['surface_stride']:08X}"
+        )
 
 
 if __name__ == "__main__":

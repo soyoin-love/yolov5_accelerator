@@ -64,6 +64,13 @@ module yolo_accel_top #(
     input  wire [15:0]                        cfg_in_width,
     input  wire [15:0]                        cfg_in_height,
     input  wire [15:0]                        cfg_in_ch_groups,
+    input  wire                               cfg_cat_en,
+    input  wire [31:0]                        cfg_cat_src1_base_addr,
+    input  wire [15:0]                        cfg_cat_src0_ch_groups,
+    input  wire [31:0]                        cfg_cat_src0_line_stride,
+    input  wire [31:0]                        cfg_cat_src1_line_stride,
+    input  wire [31:0]                        cfg_cat_src0_surface_stride,
+    input  wire [31:0]                        cfg_cat_src1_surface_stride,
     input  wire [31:0]                        cfg_b_base_addr,
     input  wire [15:0]                        cfg_out_channels,
     input  wire [15:0]                        cfg_out_width,
@@ -386,7 +393,7 @@ module yolo_accel_top #(
     // =========================================================================
     // B. 直接内存访问层 (CDMA Domain)
     // =========================================================================
-    accel_cdma_domain_top #(
+    accel_cdma_domain_top_cat #(
         .BANK_NUM           (BANK_NUM),
         .REGION_W           (REGION_W),
         .AXI_DATA_WIDTH     (AXI_DATA_WIDTH),
@@ -429,6 +436,13 @@ module yolo_accel_top #(
         .cfg_f_width            (cfg_f_width),
         .cfg_f_height           (cfg_f_height),
         .cfg_f_ch_groups        (cfg_f_ch_groups),
+        .cfg_f_cat_en           (cfg_cat_en),
+        .cfg_f_cat_src1_base_addr(cfg_cat_src1_base_addr),
+        .cfg_f_cat_src0_ch_groups(cfg_cat_src0_ch_groups),
+        .cfg_f_cat_src0_line_stride(cfg_cat_src0_line_stride),
+        .cfg_f_cat_src1_line_stride(cfg_cat_src1_line_stride),
+        .cfg_f_cat_src0_surface_stride(cfg_cat_src0_surface_stride),
+        .cfg_f_cat_src1_surface_stride(cfg_cat_src1_surface_stride),
         
         .f_rd_row_free          (cbuf_rd_row_free),
         .f_rd_free_num          (cbuf_rd_free_num),
