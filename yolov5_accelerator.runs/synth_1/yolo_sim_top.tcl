@@ -74,7 +74,7 @@ set_property ip_cache_permissions {read write} [current_project]
 OPTRACE "Creating in-memory project" END { }
 OPTRACE "Adding files" START { }
 read_verilog -library xil_defaultlib {
-  E:/IEEE2027/yolov5_accelerator/src/cdma/src/accel_cdma_domain_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/accel_cdma_domain_top_cat.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_recv_data.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_send_cmd.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/b_cdma_top.v
@@ -85,7 +85,9 @@ read_verilog -library xil_defaultlib {
   E:/IEEE2027/yolov5_accelerator/src/cacc/src/cacc_top.v
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/cbuf_dat_top.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_read_req.v
-  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_read_req_cat.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_rx_write_cat.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/cdma_top_cat.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_8.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_array.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/cmac_row.v
@@ -101,6 +103,10 @@ read_verilog -library xil_defaultlib {
   E:/IEEE2027/yolov5_accelerator/src/cbuf/src/mem_domain_top.v
   E:/IEEE2027/yolov5_accelerator/src/obuf/src/obuf_dat_top.v
   E:/IEEE2027/yolov5_accelerator/src/pool/src/pool_top.v
+  E:/IEEE2027/yolov5_accelerator/src/cdma/src/r_cdma_top.v
+  E:/IEEE2027/yolov5_accelerator/src/rbuf/src/rbuf_dat_top.v
+  E:/IEEE2027/yolov5_accelerator/src/resadd/src/resadd_core.v
+  E:/IEEE2027/yolov5_accelerator/src/resadd/src/resadd_top.v
   E:/IEEE2027/yolov5_accelerator/src/SPU/src/simd_mac_dsp.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/w_cdma_recv_data.v
   E:/IEEE2027/yolov5_accelerator/src/cdma/src/w_cdma_send_cmd.v
@@ -122,6 +128,9 @@ set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_acc
 
 read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/o_buf/o_buf.xci
 set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/o_buf/o_buf_ooc.xdc]
+
+read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/rbuf/rbuf.xci
+set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/rbuf/rbuf_ooc.xdc]
 
 OPTRACE "Adding files" END { }
 # Mark all dcp files as not used in implementation to prevent them from being

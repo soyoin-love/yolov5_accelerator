@@ -8,17 +8,16 @@ module yolo_sim_top #(
     input  wire                               clk,
     input  wire                               rst_n,
 
-    // 简化配置总线
+    // 配置
     input  wire                               cfg_req,
     input  wire [7:0]                         cfg_addr,
     input  wire [31:0]                        cfg_wdata,
     output reg                                cfg_ack,
 
-    // 顶层状态反馈
     output wire                               ap_done,
     output wire                               ap_idle,
 
-    // AXI4 Master 接口
+    // AXI4 Master 
     output wire [C_M_AXI_ID_WIDTH-1:0]        M_AXI_AWID,
     output wire [31:0]                        M_AXI_AWADDR,
     output wire [7:0]                         M_AXI_AWLEN,
@@ -62,14 +61,13 @@ module yolo_sim_top #(
     output wire                               M_AXI_RREADY
 );
 
-    // 全局启动/状态信号
-    reg         ap_start;
+
     wire        w_cdma_start, f_cdma_start, b_cdma_start, buf_start;
     wire        csc_start, cacc_start, pool_start, r_cdma_start, rbuf_start;
     wire        resadd_start, obuf_start, wdma_start;
     wire        w_cdma_done, b_cdma_done, csc_row_done, wdma_done;
 
-    // CSR 配置寄存器
+    reg         ap_start;
     reg [31:0]  cfg_f_base_addr;
     reg [31:0]  cfg_wt_base_addr;
     reg [31:0]  cfg_b_base_addr;
@@ -84,6 +82,7 @@ module yolo_sim_top #(
     reg [15:0]  cfg_out_channels;
 
     reg         cfg_cat_en;
+    reg         cfg_cat_src0_upsample;
     reg [31:0]  cfg_cat_src1_base_addr;
     reg [15:0]  cfg_cat_src0_ch_groups;
     reg [31:0]  cfg_cat_src0_line_stride;
@@ -109,7 +108,7 @@ module yolo_sim_top #(
     reg         cfg_pool_pad_zero;
     reg         cfg_resadd_relu_en;
 
-    // 简化 CSR 写入逻辑
+    
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             ap_start <= 1'b0;
@@ -129,6 +128,7 @@ module yolo_sim_top #(
             cfg_out_channels <= 16'd0;
 
             cfg_cat_en <= 1'b0;
+            cfg_cat_src0_upsample <= 1'b0;
             cfg_cat_src1_base_addr <= 32'd0;
             cfg_cat_src0_ch_groups <= 16'd0;
             cfg_cat_src0_line_stride <= 32'd0;
@@ -166,9 +166,8 @@ module yolo_sim_top #(
                     8'h18: cfg_b_base_addr <= cfg_wdata;
                     8'h1C: cfg_wdma_base_addr <= cfg_wdata;
 
-                    8'h20: {cfg_in_width, cfg_in_height} <= cfg_wdata;
-                    // 兼容旧版脚本，0x24 仍映射到输入宽高。
-                    //8'h24: {cfg_in_width, cfg_in_height} <= cfg_wdata;
+                    8'h20: cfg_res_base_addr <= cfg_wdata;
+                    8'h24: {cfg_in_width, cfg_in_height} <= cfg_wdata;
                     8'h28: {cfg_out_width, cfg_out_height} <= cfg_wdata;
                     8'h2C: {cfg_in_ch_groups, cfg_out_channels} <= cfg_wdata;
 
@@ -180,32 +179,28 @@ module yolo_sim_top #(
                         cfg_wt_is_odd_oc <= cfg_wdata[0];
                     end
                     8'h38: cfg_wt_coords_per_region <= cfg_wdata[15:0];
-                    8'h3C: ;
-                    8'h3E: ;
-                    8'h40: cfg_wt_total_beats <= cfg_wdata[27:0];
-                    8'h48: begin
+                    8'h3C: cfg_wt_total_beats <= cfg_wdata[27:0];
+                    8'h40: begin
                         cfg_cacc_relu_en <= cfg_wdata[16];
                         cfg_cacc_b_total_beats <= cfg_wdata[15:0];
                     end
-                    8'h4C: ;
-                    8'h50: ;
-                    8'h54: begin
+                    8'h44: begin
                         cfg_op_mode <= cfg_wdata[1:0];
                         cfg_pool_pad_zero <= cfg_wdata[2];
                         cfg_resadd_relu_en <= cfg_wdata[3];
                     end
-                    8'h58: cfg_res_base_addr <= cfg_wdata;
+                    8'h48: cfg_cat_src1_base_addr <= cfg_wdata;
 
-                    // virtual concat 配置
-                    8'h5C: cfg_cat_src1_base_addr <= cfg_wdata;
-                    8'h60: begin
+                    // virtual concat 閰嶇疆
+                    8'h4C: begin
+                        cfg_cat_src0_upsample <= cfg_wdata[17];
                         cfg_cat_en <= cfg_wdata[16];
                         cfg_cat_src0_ch_groups <= cfg_wdata[15:0];
                     end
-                    8'h64: cfg_cat_src0_line_stride <= cfg_wdata;
-                    8'h68: cfg_cat_src1_line_stride <= cfg_wdata;
-                    8'h6C: cfg_cat_src0_surface_stride <= cfg_wdata;
-                    8'h70: cfg_cat_src1_surface_stride <= cfg_wdata;
+                    8'h50: cfg_cat_src0_line_stride <= cfg_wdata;
+                    8'h54: cfg_cat_src1_line_stride <= cfg_wdata;
+                    8'h58: cfg_cat_src0_surface_stride <= cfg_wdata;
+                    8'h5C: cfg_cat_src1_surface_stride <= cfg_wdata;
 
                     default: ;
                 endcase
@@ -215,7 +210,7 @@ module yolo_sim_top #(
         end
     end
 
-    // 全局状态机
+    // 鍏ㄥ眬鐘舵€佹満
     yolo_global_fsm u_fsm (
         .clk          (clk),
         .rst_n        (rst_n),
@@ -242,7 +237,7 @@ module yolo_sim_top #(
         .wdma_done    (wdma_done)
     );
 
-    // 数据通路顶层
+    // 鏁版嵁閫氳矾椤跺眰
     yolo_accel_top u_accel (
         .clk                         (clk),
         .rst_n                       (rst_n),
@@ -274,6 +269,7 @@ module yolo_sim_top #(
         .cfg_in_height               (cfg_in_height),
         .cfg_in_ch_groups            (cfg_in_ch_groups),
         .cfg_cat_en                  (cfg_cat_en),
+        .cfg_cat_src0_upsample       (cfg_cat_src0_upsample),
         .cfg_cat_src1_base_addr      (cfg_cat_src1_base_addr),
         .cfg_cat_src0_ch_groups      (cfg_cat_src0_ch_groups),
         .cfg_cat_src0_line_stride    (cfg_cat_src0_line_stride),

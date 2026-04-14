@@ -48,10 +48,12 @@ module wdma_core #(
 
     reg [31:0] cur_addr;     
     reg [15:0] rem_beats;    
+    reg [15:0] beats_sent_in_row;
     reg [7:0]  cur_burst_len;
     reg [7:0]  req_cnt;
 
     reg        dat_valid_r;
+    reg        pad_high64_r;
     reg [7:0]  data_sent_cnt; 
 
     // ==========================================
@@ -142,8 +144,17 @@ module wdma_core #(
     // ==========================================
     wire issue_read = (state == ST_SEND_DATA) && (req_cnt < cur_burst_len) && mcif_ready;
     
-    // 触发 OBUF 弹出的条件：读满了 4 拍(一个完整 FIFO 块) 或 已经读到了本行的最后一拍(强制清理对齐)
-    wire force_pop_line = issue_read && ((chunk_cnt == 2'd3) || (rem_beats == 16'd1));
+    // 行尾判断必须基于“本行已发送 beat 数”，不能直接使用 rem_beats。
+    // 因为 rem_beats 在 SEND_CMD 阶段已经按整个 burst 预扣减，发送数据阶段它不再表示“当前拍后还剩多少 beat”。
+    wire issue_last_beat_in_row = issue_read && (beats_sent_in_row == total_row_beats - 1'b1);
+
+    // 触发 OBUF 弹出的条件：
+    // 1. 累满 4 拍(一个完整 FIFO 行)
+    // 2. 或当前拍已经是本行最后一拍，需要把不足 4 拍的尾块也弹出
+    wire force_pop_line = issue_read && ((chunk_cnt == 2'd3) || issue_last_beat_in_row);
+
+    // 若输出宽为奇数，则每行最后一拍的高 64bit 为无效像素，需要在 WDMA 侧补零。
+    wire issue_pad_high64 = issue_last_beat_in_row && cfg_w_out[0];
     
     assign wdma_rd_next_g0 = force_pop_line && (!current_fifo_is_g1);
     assign wdma_rd_next_g1 = force_pop_line && (current_fifo_is_g1);
@@ -154,17 +165,21 @@ module wdma_core #(
             ch_grp        <= 0;
             chunk_cnt     <= 0;
             rem_beats     <= 0;
+            beats_sent_in_row <= 0;
             cur_burst_len <= 0;
             req_cnt       <= 0;
             cur_addr      <= 0;
             dat_valid_r   <= 0;
+            pad_high64_r  <= 1'b0;
             data_sent_cnt <= 0;
         end else begin
             if (state == ST_SEND_DATA) begin
-                dat_valid_r <= issue_read; 
+                dat_valid_r  <= issue_read; 
+                pad_high64_r <= issue_pad_high64;
                 if (dat_valid_r) data_sent_cnt <= data_sent_cnt + 1'b1;
             end else begin
-                dat_valid_r <= 1'b0;
+                dat_valid_r  <= 1'b0;
+                pad_high64_r <= 1'b0;
                 data_sent_cnt <= 0;
             end
 
@@ -176,6 +191,7 @@ module wdma_core #(
                         cur_addr  <= cfg_base_addr;
                         rem_beats <= total_row_beats; 
                         chunk_cnt <= 0;
+                        beats_sent_in_row <= 0;
                     end
                 end
                 
@@ -195,6 +211,12 @@ module wdma_core #(
                     if (issue_read) begin
                         req_cnt   <= req_cnt + 1'b1;
                         chunk_cnt <= chunk_cnt + 1'b1; 
+
+                        if (issue_last_beat_in_row) begin
+                            beats_sent_in_row <= 0;
+                        end else begin
+                            beats_sent_in_row <= beats_sent_in_row + 1'b1;
+                        end
                     end
                 end
                 
@@ -217,6 +239,7 @@ module wdma_core #(
 
     reg [15:0] next_rd_mask;
     always @(*) begin
+        next_rd_mask = 16'd0;
         if (!current_fifo_is_g1) begin 
             case (chunk_cnt)
                 2'd0: next_rd_mask = 16'h0003;
@@ -244,7 +267,8 @@ module wdma_core #(
     
     wire [128:0] dat_packet;
     assign dat_packet[128]    = 1'b0;                                
-    assign dat_packet[127:0]  = obuf_rd_dat;                         
+    assign dat_packet[127:64] = pad_high64_r ? 64'd0 : obuf_rd_dat[127:64];
+    assign dat_packet[63:0]   = obuf_rd_dat[63:0];
 
     assign mcif_valid = (state == ST_SEND_CMD) || dat_valid_r;
     assign mcif_data  = (state == ST_SEND_CMD) ? cmd_packet : dat_packet;

@@ -65,6 +65,7 @@ module yolo_accel_top #(
     input  wire [15:0]                        cfg_in_height,
     input  wire [15:0]                        cfg_in_ch_groups,
     input  wire                               cfg_cat_en,
+    input  wire                               cfg_cat_src0_upsample,
     input  wire [31:0]                        cfg_cat_src1_base_addr,
     input  wire [15:0]                        cfg_cat_src0_ch_groups,
     input  wire [31:0]                        cfg_cat_src0_line_stride,
@@ -217,9 +218,10 @@ module yolo_accel_top #(
     wire                                cbuf_can_write;
     wire                                cbuf_wr_en;
     wire [15:0]                         cbuf_wr_row;
-    wire [15:0]                         cbuf_wr_col;
+    wire [15:0]                         cbuf_wr_col_blk;
     wire [15:0]                         cbuf_wr_ch_grp;
-    wire [2*TK_IN*N-1:0]                cbuf_wr_dat;
+    wire [BANK_NUM-1:0]                 cbuf_wr_bank_en;
+    wire [BANK_NUM*TK_IN*N-1:0]         cbuf_wr_bank_dat;
     wire                                cbuf_wr_row_done;
 
     wire [7:0]                          cbuf_rd_en;
@@ -231,6 +233,8 @@ module yolo_accel_top #(
     wire                                cbuf_can_read;
     wire                                cbuf_rd_dat_vld;
     wire [BANK_NUM*TK_IN*N-1:0]         cbuf_rd_dat_out;
+    wire [15:0]                         cbuf_status_wr_row_ptr;
+    wire [15:0]                         cbuf_status_rd_row_ptr;
 
     wire [7:0]                          csc_cbuf_rd_en;
     wire [15:0]                         csc_cbuf_rd_row;
@@ -272,6 +276,8 @@ module yolo_accel_top #(
     wire                                rbuf_can_read;
     wire                                rbuf_rd_dat_vld;
     wire [BANK_NUM*TK_IN*N-1:0]         rbuf_rd_dat_out;
+    wire [15:0]                         rbuf_status_wr_row_ptr;
+    wire [15:0]                         rbuf_status_rd_row_ptr;
 
     // --- BBUF 交互线网 ---
     wire [BANK_NUM-1:0]                 bbuf_wr_en;
@@ -437,6 +443,7 @@ module yolo_accel_top #(
         .cfg_f_height           (cfg_f_height),
         .cfg_f_ch_groups        (cfg_f_ch_groups),
         .cfg_f_cat_en           (cfg_cat_en),
+        .cfg_f_cat_src0_upsample(cfg_cat_src0_upsample),
         .cfg_f_cat_src1_base_addr(cfg_cat_src1_base_addr),
         .cfg_f_cat_src0_ch_groups(cfg_cat_src0_ch_groups),
         .cfg_f_cat_src0_line_stride(cfg_cat_src0_line_stride),
@@ -456,9 +463,10 @@ module yolo_accel_top #(
         
         .cbuf_wr_en             (cbuf_wr_en),
         .cbuf_wr_row            (cbuf_wr_row),
-        .cbuf_wr_col            (cbuf_wr_col),
+        .cbuf_wr_col_blk        (cbuf_wr_col_blk),
         .cbuf_wr_ch_grp         (cbuf_wr_ch_grp),
-        .cbuf_wr_dat            (cbuf_wr_dat),
+        .cbuf_wr_bank_en        (cbuf_wr_bank_en),
+        .cbuf_wr_bank_dat       (cbuf_wr_bank_dat),
         .cbuf_wr_row_done       (cbuf_wr_row_done),
 
         // B_CDMA 端口
@@ -535,9 +543,10 @@ module yolo_accel_top #(
         // CBUF 端口
         .cbuf_wr_en             (cbuf_wr_en),
         .cbuf_wr_row            (cbuf_wr_row),
-        .cbuf_wr_col            (cbuf_wr_col),
+        .cbuf_wr_col_blk        (cbuf_wr_col_blk),
         .cbuf_wr_ch_grp         (cbuf_wr_ch_grp),
-        .cbuf_wr_dat            (cbuf_wr_dat),
+        .cbuf_wr_bank_en        (cbuf_wr_bank_en),
+        .cbuf_wr_bank_dat       (cbuf_wr_bank_dat),
         .cbuf_wr_row_done       (cbuf_wr_row_done),
         .cbuf_can_write         (cbuf_can_write),
         
@@ -550,6 +559,8 @@ module yolo_accel_top #(
         .cbuf_can_read          (cbuf_can_read),
         .cbuf_rd_dat_vld        (cbuf_rd_dat_vld),
         .cbuf_rd_dat_out        (cbuf_rd_dat_out),
+        .cbuf_status_wr_row_ptr (cbuf_status_wr_row_ptr),
+        .cbuf_status_rd_row_ptr (cbuf_status_rd_row_ptr),
 
         // WBUF 端口
         .wbuf_wr_bank_en        (wbuf_wr_bank_en),
@@ -608,7 +619,9 @@ module yolo_accel_top #(
         .rd_free_num        (resadd_rbuf_rd_free_num),
         .rbuf_can_read      (rbuf_can_read),
         .rd_dat_vld         (rbuf_rd_dat_vld),
-        .rd_dat_out         (rbuf_rd_dat_out)
+        .rd_dat_out         (rbuf_rd_dat_out),
+        .status_wr_row_ptr  (rbuf_status_wr_row_ptr),
+        .status_rd_row_ptr  (rbuf_status_rd_row_ptr)
     );
 
     // =========================================================================
@@ -731,6 +744,8 @@ module yolo_accel_top #(
         .cfg_ch_groups(cfg_out_ch_groups),
         .cfg_relu_en(cfg_resadd_relu_en),
         .cbuf_can_read(cbuf_can_read),
+        .cbuf_status_wr_row_ptr(cbuf_status_wr_row_ptr),
+        .cbuf_status_rd_row_ptr(cbuf_status_rd_row_ptr),
         .cbuf_rd_en(resadd_cbuf_rd_en),
         .cbuf_rd_row(resadd_cbuf_rd_row),
         .cbuf_rd_col_align(resadd_cbuf_rd_col_align),
@@ -740,6 +755,8 @@ module yolo_accel_top #(
         .cbuf_rd_dat_vld(cbuf_rd_dat_vld),
         .cbuf_rd_dat(cbuf_rd_dat_out),
         .rbuf_can_read(rbuf_can_read),
+        .rbuf_status_wr_row_ptr(rbuf_status_wr_row_ptr),
+        .rbuf_status_rd_row_ptr(rbuf_status_rd_row_ptr),
         .rbuf_rd_en(resadd_rbuf_rd_en),
         .rbuf_rd_row(resadd_rbuf_rd_row),
         .rbuf_rd_col_align(resadd_rbuf_rd_col_align),

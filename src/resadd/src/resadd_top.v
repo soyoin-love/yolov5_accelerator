@@ -22,6 +22,8 @@ module resadd_top #(
     input  wire                         cfg_relu_en,
 
     input  wire                         cbuf_can_read,
+    input  wire [15:0]                  cbuf_status_wr_row_ptr,
+    input  wire [15:0]                  cbuf_status_rd_row_ptr,
     output reg  [7:0]                   cbuf_rd_en,
     output reg  [15:0]                  cbuf_rd_row,
     output reg  [15:0]                  cbuf_rd_col_align,
@@ -32,6 +34,8 @@ module resadd_top #(
     input  wire [BANK_NUM*TK_IN*N-1:0]  cbuf_rd_dat,
 
     input  wire                         rbuf_can_read,
+    input  wire [15:0]                  rbuf_status_wr_row_ptr,
+    input  wire [15:0]                  rbuf_status_rd_row_ptr,
     output reg  [7:0]                   rbuf_rd_en,
     output reg  [15:0]                  rbuf_rd_row,
     output reg  [15:0]                  rbuf_rd_col_align,
@@ -101,6 +105,8 @@ module resadd_top #(
     wire [7:0]        out_mask_c;
     wire [7:0]        out_mask_r;
     wire [7:0]        out_mask_w;
+    wire              cbuf_row_ready;
+    wire              rbuf_row_ready;
 
     wire              c_last_w;
     wire              c_last_ch;
@@ -150,6 +156,13 @@ module resadd_top #(
     assign out_mask_c = calc_out_mask(w_blk_cnt_c, cfg_w_out);
     assign out_mask_r = calc_out_mask(w_blk_cnt_r, cfg_w_out);
     assign out_mask_w = calc_out_mask(w_blk_cnt_w, cfg_w_out);
+    // ResAdd 的读引擎会超前预取，因此不能只看全局 can_read。
+    // 这里额外要求目标行必须处于 [rd_row_ptr, wr_row_ptr) 的安全窗口内，
+    // 避免在行槽位复用边界上读到正被下一帧写入的物理地址。
+    assign cbuf_row_ready = (h_cnt_c >= cbuf_status_rd_row_ptr) &&
+                            (h_cnt_c <  cbuf_status_wr_row_ptr);
+    assign rbuf_row_ready = (h_cnt_r >= rbuf_status_rd_row_ptr) &&
+                            (h_cnt_r <  rbuf_status_wr_row_ptr);
 
     assign c_last_w  = (w_blk_cnt_c  == cfg_w_out_blocks   - 1'b1);
     assign c_last_ch = (ch_grp_cnt_c == cfg_ch_groups_safe - 1'b1);
@@ -167,12 +180,14 @@ module resadd_top #(
     assign cbuf_issue_fire = running &&
                             !c_issue_done &&
                             cbuf_can_read &&
+                            cbuf_row_ready &&
                             !cbuf_fifo_full &&
                             (cbuf_total_used < FIFO_DEPTH);
 
     assign rbuf_issue_fire = running &&
                             !r_issue_done &&
                             rbuf_can_read &&
+                            rbuf_row_ready &&
                             !rbuf_fifo_full &&
                             (rbuf_total_used < FIFO_DEPTH);
 

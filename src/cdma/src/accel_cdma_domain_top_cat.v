@@ -14,7 +14,6 @@ module accel_cdma_domain_top_cat #(
     input  wire                               clk,
     input  wire                               rst_n,
 
-    // 权重 CDMA
     input  wire                               w_start,
     output wire                               w_done,
     input  wire [27:0]                        cfg_wt_total_beats,
@@ -35,13 +34,13 @@ module accel_cdma_domain_top_cat #(
     output wire [AXI_DATA_WIDTH-1:0]          wbuf_wr_dat,
     output wire                               wbuf_wr_region_done,
 
-    // 特征图 CDMA
     input  wire                               f_start,
     input  wire [31:0]                        cfg_f_base_addr,
     input  wire [15:0]                        cfg_f_width,
     input  wire [15:0]                        cfg_f_height,
     input  wire [15:0]                        cfg_f_ch_groups,
     input  wire                               cfg_f_cat_en,
+    input  wire                               cfg_f_cat_src0_upsample,
     input  wire [31:0]                        cfg_f_cat_src1_base_addr,
     input  wire [15:0]                        cfg_f_cat_src0_ch_groups,
     input  wire [31:0]                        cfg_f_cat_src0_line_stride,
@@ -58,12 +57,12 @@ module accel_cdma_domain_top_cat #(
     output wire                               f_mcif_rx_rdy,
     output wire                               cbuf_wr_en,
     output wire [15:0]                        cbuf_wr_row,
-    output wire [15:0]                        cbuf_wr_col,
+    output wire [15:0]                        cbuf_wr_col_blk,
     output wire [15:0]                        cbuf_wr_ch_grp,
-    output wire [2*TK_IN*N-1:0]               cbuf_wr_dat,
+    output wire [BANK_NUM-1:0]                cbuf_wr_bank_en,
+    output wire [BANK_NUM*TK_IN*N-1:0]        cbuf_wr_bank_dat,
     output wire                               cbuf_wr_row_done,
 
-    // 偏置 CDMA
     input  wire                               b_start,
     output wire                               b_done,
     input  wire [31:0]                        cfg_b_base_addr,
@@ -109,12 +108,12 @@ module accel_cdma_domain_top_cat #(
         .wbuf_wr_region_done  (wbuf_wr_region_done)
     );
 
-    // 将 concat 融入特征图装载过程，后级 CBUF/CSC 仍然看到连续的通道组布局。
     cdma_top_cat #(
         .ROW_BLOCKS(ROW_BLOCKS),
+        .BANK_NUM  (BANK_NUM),
         .TK_IN     (TK_IN),
         .N         (N)
-    ) u_f_cdma_cat (
+    ) u_f_cdma (
         .clk                        (clk),
         .rst_n                      (rst_n),
         .start                      (f_start),
@@ -123,6 +122,7 @@ module accel_cdma_domain_top_cat #(
         .cfg_height                 (cfg_f_height),
         .cfg_ch_groups              (cfg_f_ch_groups),
         .cfg_cat_en                 (cfg_f_cat_en),
+        .cfg_cat_src0_upsample      (cfg_f_cat_src0_upsample),
         .cfg_cat_src1_base_addr     (cfg_f_cat_src1_base_addr),
         .cfg_cat_src0_ch_groups     (cfg_f_cat_src0_ch_groups),
         .cfg_cat_src0_line_stride   (cfg_f_cat_src0_line_stride),
@@ -139,9 +139,10 @@ module accel_cdma_domain_top_cat #(
         .mcif_rx_rdy                (f_mcif_rx_rdy),
         .wr_en                      (cbuf_wr_en),
         .wr_row                     (cbuf_wr_row),
-        .wr_col                     (cbuf_wr_col),
+        .wr_col_blk                 (cbuf_wr_col_blk),
         .wr_ch_grp                  (cbuf_wr_ch_grp),
-        .wr_dat                     (cbuf_wr_dat),
+        .wr_bank_en                 (cbuf_wr_bank_en),
+        .wr_bank_dat                (cbuf_wr_bank_dat),
         .wr_row_done                (cbuf_wr_row_done)
     );
 

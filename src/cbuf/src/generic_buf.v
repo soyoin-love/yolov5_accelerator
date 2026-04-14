@@ -30,7 +30,7 @@ module generic_buf #(
     // 读数据寄存器，用于实现 1 周期读取延迟 
     reg [DATA_WIDTH-1:0] rd_dat_r;
 
-    // 写逻辑：同步写入 [cite: 123]
+    // 写逻辑：同步写入 
     always @(posedge clk) begin
         if (wr_en) begin
             mem[wr_addr] <= wr_dat;
@@ -55,7 +55,7 @@ module generic_buf #(
         end
     end
 
-    // 输出读到的寄存器数据 [cite: 123]
+    // 输出读到的寄存器数据 
     assign rd_dat = rd_dat_r;
 
 endmodule

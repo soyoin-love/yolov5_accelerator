@@ -1,267 +1,3 @@
-// `timescale 1ns / 1ps
-
-// module csc_dat #(
-//     parameter BANK_NUM = 8,
-//     parameter TK_IN    = 8,
-//     parameter N        = 8
-// )(
-//     input  wire        clk,
-//     input  wire        rst_n,
-//     input  wire        start,
-
-//     // ==========================================
-//     // 0. 全局配置寄存器 (CSR)
-//     // ==========================================
-//     input  wire [15:0] cfg_w_out,        
-//     input  wire [15:0] cfg_w_out_blocks, 
-//     input  wire [15:0] cfg_h_out,        
-//     input  wire [15:0] cfg_w_in,         
-//     input  wire [15:0] cfg_h_in,         
-//     input  wire [15:0] cfg_co_groups,    
-//     input  wire [15:0] cfg_ci_groups,    
-//     input  wire [3:0]  cfg_kx,           
-//     input  wire [3:0]  cfg_ky,           
-//     input  wire [3:0]  cfg_stride_x,     
-//     input  wire [3:0]  cfg_stride_y,     
-//     input  wire [3:0]  cfg_pad_left,     
-//     input  wire [3:0]  cfg_pad_up,       
-//     input  wire [3:0]  cfg_active_banks,
-//     output wire        csc_row_done,
-
-//     // ==========================================
-//     // 1. 特征图 CBUF 交互接口
-//     // ==========================================
-//     input  wire        cbuf_can_read, 
-//     output wire [7:0]  cbuf_rd_en,         
-//     output wire [15:0] cbuf_rd_row,        
-//     output wire [15:0] cbuf_rd_col_align,  
-//     output wire [15:0] cbuf_rd_ch_grp,     
-//     output reg         cbuf_rd_row_free,   
-//     output reg  [3:0]  cbuf_rd_free_num,   
-//     input  wire [BANK_NUM*TK_IN*N-1:0] cbuf_rd_dat,
-
-//     // ==========================================
-//     // 2. 权重 WBUF 交互接口
-//     // ==========================================
-//     input  wire        wbuf_can_read,
-//     output wire [BANK_NUM-1:0] wbuf_rd_en,
-//     output wire        wbuf_step_en,
-//     output wire        wbuf_offset_clr,    // 窗口切换，区域内复位
-//     output wire        wbuf_region_done,   // 通道组算完，区域彻底释放
-
-//     // ==========================================
-//     // 3. MAC 阵列交互接口
-//     // ==========================================
-//     input  wire        mac_buf_ready, 
-//     output wire [BANK_NUM*TK_IN*N-1:0] mac_dat,
-//     output reg         mac_valid,     
-//     output reg  [7:0]  mac_pixel_mask,
-//     output reg  [15:0] mac_co_grp,    
-//     output reg         mac_is_last_ci 
-// );
-
-//     // =====================================================================
-//     // [Stage 0] 统一流控与修正后的 6D 循环引擎
-//     // =====================================================================
-//     reg working;
-//     wire h_done, h_en;
-    
-//     assign csc_row_done = h_en;
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n) working <= 1'b0;
-//         else if (start) working <= 1'b1;
-//         else if (h_en && h_done) working <= 1'b0;
-//     end
-
-//     wire step_en = working && cbuf_can_read && wbuf_can_read && mac_buf_ready; 
-
-//     // 层级1: 输入通道组
-//     reg [15:0] ci_grp;    wire ci_done = (ci_grp == cfg_ci_groups - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) ci_grp <= 0; else if (step_en) ci_grp <= ci_done ? 0 : ci_grp + 1'b1;
-//     end
-    
-//     // 层级2: 卷积核 X
-//     reg [3:0] kx;         wire kx_en = step_en && ci_done; wire kx_done = (kx == cfg_kx - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) kx <= 0; else if (kx_en) kx <= kx_done ? 0 : kx + 1'b1;
-//     end
-    
-//     // 层级3: 卷积核 Y
-//     reg [3:0] ky;         wire ky_en = kx_en && kx_done;   wire ky_done = (ky == cfg_ky - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) ky <= 0; else if (ky_en) ky <= ky_done ? 0 : ky + 1'b1;
-//     end
-    
-//     // 层级4: 输出像素列条带 (w_out_blk 移入内层，实现权重行级别复用)
-//     reg [15:0] w_out_blk; wire w_en = ky_en && ky_done;    wire w_done = (w_out_blk == cfg_w_out_blocks - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) w_out_blk <= 0; else if (w_en) w_out_blk <= w_done ? 0 : w_out_blk + 1'b1;
-//     end
-    
-//     // 层级5: 输出通道组 (co_grp 移出外层)
-//     reg [15:0] co_grp;    wire co_en = w_en && w_done;     wire co_done = (co_grp == cfg_co_groups - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) co_grp <= 0; else if (co_en) co_grp <= co_done ? 0 : co_grp + 1'b1;
-//     end
-    
-//     // 层级6: 输出行
-//     reg [15:0] h_out;     assign h_en = co_en && co_done;  assign h_done = (h_out == cfg_h_out - 1);
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n || start) h_out <= 0; else if (h_en) h_out <= h_done ? 0 : h_out + 1'b1;
-//     end
-
-//     // 关键状态拆分
-//     wire is_acc_window_done_s0    = ci_done && kx_done && ky_done;
-//     wire is_co_grp_region_done_s0 = is_acc_window_done_s0 && w_done;
-
-//     // 行释放预计算
-//     wire signed [15:0] cur_lowest  = $signed({1'b0, h_out}) * $signed({1'b0, cfg_stride_y}) - $signed({1'b0, cfg_pad_up});
-//     wire signed [15:0] next_lowest = cur_lowest + $signed({1'b0, cfg_stride_y});
-//     wire signed [15:0] real_cur_lowest  = (cur_lowest < 0)  ? 16'd0 : cur_lowest;
-//     wire signed [15:0] real_next_lowest = (next_lowest < 0) ? 16'd0 : next_lowest;
-//     wire [3:0] free_num_s0 = (real_next_lowest - real_cur_lowest);
-
-//     // =====================================================================
-//     // [Stage 1] 坐标转换与缓存寻址打拍
-//     // =====================================================================
-//     reg [3:0] free_num_d1;
-//     reg       free_vld_d1;
-//     reg signed [15:0] in_row_d1, in_col_base_d1, out_col_base_d1;
-//     reg [15:0] ci_grp_d1, co_grp_d1; 
-//     reg step_en_d1, mac_is_last_ci_d1;
-//     reg wbuf_offset_clr_d1, wbuf_region_done_d1;
-
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n) begin
-//             free_num_d1 <= 0; free_vld_d1 <= 0;
-//             in_row_d1 <= 0; in_col_base_d1 <= 0; out_col_base_d1 <= 0;
-//             ci_grp_d1 <= 0; co_grp_d1 <= 0;
-//             step_en_d1 <= 0; mac_is_last_ci_d1 <= 0;
-//             wbuf_offset_clr_d1 <= 0; wbuf_region_done_d1 <= 0;
-//         end else begin
-//             free_vld_d1 <= h_en && (free_num_s0 > 0);
-//             free_num_d1 <= free_num_s0;
-//             step_en_d1 <= step_en; 
-            
-//             mac_is_last_ci_d1   <= is_acc_window_done_s0;
-//             wbuf_offset_clr_d1  <= is_acc_window_done_s0;
-//             wbuf_region_done_d1 <= is_co_grp_region_done_s0;
-
-//             ci_grp_d1 <= ci_grp; 
-//             co_grp_d1 <= co_grp;
-            
-//             in_row_d1       <= $signed({1'b0, h_out}) * $signed({1'b0, cfg_stride_y}) - $signed({1'b0, cfg_pad_up}) + $signed({1'b0, ky});
-//             out_col_base_d1 <= $signed({1'b0, w_out_blk}) * 8;
-//             in_col_base_d1  <= $signed({1'b0, w_out_blk}) * 8 * $signed({1'b0, cfg_stride_x}) - $signed({1'b0, cfg_pad_left}) + $signed({1'b0, kx});
-//         end
-//     end
-
-//     // --- CBUF 寻址与控制 (解除强制对齐掩断，将实际坐标发给 CBUF 处理移位) ---
-//     assign cbuf_rd_row       = in_row_d1[15:0];
-//     //assign cbuf_rd_col_align = (in_col_base_d1 < 0) ? 16'd0 : in_col_base_d1[15:0];
-//     assign cbuf_rd_col_align = in_col_base_d1[15:0];
-//     assign cbuf_rd_ch_grp    = ci_grp_d1;
-
-//     wire [7:0] in_p_mask_c;   
-//     wire [7:0] out_p_mask_c;  
-
-//     genvar i;
-//     generate for(i=0; i<8; i=i+1) begin : MASK_GEN
-//         wire signed [15:0] cur_in_col = in_col_base_d1 + i;
-//         wire signed [15:0] cur_out_col = out_col_base_d1 + i;
-//         assign in_p_mask_c[i] = (in_row_d1 >= 0) && (in_row_d1 < $signed({1'b0, cfg_h_in})) &&
-//                                 (cur_in_col >= 0) && (cur_in_col < $signed({1'b0, cfg_w_in}));
-//         assign out_p_mask_c[i] = (cur_out_col < $signed({1'b0, cfg_w_out}));
-//     end endgenerate
-
-//     assign cbuf_rd_en = step_en_d1 ? in_p_mask_c : 8'd0;
-
-//     // --- WBUF 寻址与控制 ---
-//     wire [BANK_NUM-1:0] wbuf_active_mask = (co_grp_d1 == cfg_co_groups - 1) ? 
-//                                         ((8'h01 << cfg_active_banks) - 1'b1) : {BANK_NUM{1'b1}};
-                                        
-//     assign wbuf_rd_en       = step_en_d1 ? wbuf_active_mask : {BANK_NUM{1'b0}}; 
-//     assign wbuf_step_en     = step_en_d1;
-//     assign wbuf_offset_clr  = wbuf_offset_clr_d1;
-//     assign wbuf_region_done = wbuf_region_done_d1;
-
-//     // =====================================================================
-//     // [Stage 2] ~ [Stage 5] 控制流水线与数据清洗 (对齐 CBUF 的 4 拍延迟)
-//     // =====================================================================
-//     reg        mac_valid_d2, mac_is_last_ci_d2;
-//     reg [15:0] mac_co_grp_d2;
-//     reg [7:0]  in_p_mask_d2, out_p_mask_d2;
-
-//     reg        mac_valid_d3, mac_is_last_ci_d3;
-//     reg [15:0] mac_co_grp_d3;
-//     reg [7:0]  in_p_mask_d3, out_p_mask_d3;
-
-//     reg        mac_valid_d4, mac_is_last_ci_d4;
-//     reg [15:0] mac_co_grp_d4;
-//     reg [7:0]  in_p_mask_d4, out_p_mask_d4;
-
-//     reg [7:0]  in_p_mask_d5;
-
-//     always @(posedge clk or negedge rst_n) begin
-//         if (!rst_n) begin
-//             cbuf_rd_row_free <= 0; cbuf_rd_free_num <= 0;
-            
-//             mac_valid_d2 <= 0; mac_is_last_ci_d2 <= 0; mac_co_grp_d2 <= 0;
-//             in_p_mask_d2 <= 0; out_p_mask_d2 <= 0;
-            
-//             mac_valid_d3 <= 0; mac_is_last_ci_d3 <= 0; mac_co_grp_d3 <= 0;
-//             in_p_mask_d3 <= 0; out_p_mask_d3 <= 0;
-            
-//             mac_valid_d4 <= 0; mac_is_last_ci_d4 <= 0; mac_co_grp_d4 <= 0;
-//             in_p_mask_d4 <= 0; out_p_mask_d4 <= 0;
-
-//             in_p_mask_d5 <= 0;
-//             mac_valid <= 0; mac_pixel_mask <= 0; mac_co_grp <= 0; mac_is_last_ci <= 0;
-//         end else begin
-//             cbuf_rd_row_free <= free_vld_d1;
-//             cbuf_rd_free_num <= free_num_d1;
-            
-//             // T2 寄存器
-//             mac_valid_d2      <= step_en_d1; 
-//             mac_is_last_ci_d2 <= mac_is_last_ci_d1; 
-//             mac_co_grp_d2     <= co_grp_d1;
-//             in_p_mask_d2      <= in_p_mask_c;
-//             out_p_mask_d2     <= out_p_mask_c;
-
-//             // T3 寄存器
-//             mac_valid_d3      <= mac_valid_d2; 
-//             mac_is_last_ci_d3 <= mac_is_last_ci_d2; 
-//             mac_co_grp_d3     <= mac_co_grp_d2;
-//             in_p_mask_d3      <= in_p_mask_d2;
-//             out_p_mask_d3     <= out_p_mask_d2;
-
-//             // T4 寄存器
-//             mac_valid_d4      <= mac_valid_d3; 
-//             mac_is_last_ci_d4 <= mac_is_last_ci_d3; 
-//             mac_co_grp_d4     <= mac_co_grp_d3;
-//             in_p_mask_d4      <= in_p_mask_d3;
-//             out_p_mask_d4     <= out_p_mask_d3;
-
-//             // T5 最终输出 (与 CBUF 数据同步)
-//             in_p_mask_d5   <= in_p_mask_d4; 
-//             mac_valid      <= mac_valid_d4;
-//             mac_pixel_mask <= out_p_mask_d4; 
-//             mac_co_grp     <= mac_co_grp_d4; 
-//             mac_is_last_ci <= mac_is_last_ci_d4;
-//         end
-//     end
-
-//     // 使用 T5 级的掩码清理 CBUF 吐出的脏数据
-//     wire [BANK_NUM*TK_IN*N-1:0] clean_mac_dat;
-//     generate for(i=0; i<8; i=i+1) begin : DAT_CLEANER
-//         assign clean_mac_dat[i*(TK_IN*N) +: (TK_IN*N)] = 
-//             in_p_mask_d5[i] ? cbuf_rd_dat[i*(TK_IN*N) +: (TK_IN*N)] : {(TK_IN*N){1'b0}};
-//     end endgenerate
-    
-//     assign mac_dat = clean_mac_dat;
-
-// endmodule
 
 `timescale 1ns / 1ps
 
@@ -406,8 +142,8 @@ module csc_dat #(
     reg step_en_d1, mac_is_last_ci_d1;
     reg wbuf_offset_clr_d1, wbuf_region_done_d1;
 
-    // 【新增】：管线化相位控制信号
-    reg cbuf_fire_d1, phase_done_d1, stride_phase_d1, is_stride2_d1;
+    // 将 stride2 相位控制与 cbuf_fire 一起打拍，供后级数据拼拍使用。
+    reg cbuf_fire_d1, stride_phase_d1, is_stride2_d1;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -417,14 +153,13 @@ module csc_dat #(
             step_en_d1 <= 0; mac_is_last_ci_d1 <= 0;
             wbuf_offset_clr_d1 <= 0; wbuf_region_done_d1 <= 0;
             
-            cbuf_fire_d1 <= 0; phase_done_d1 <= 0; stride_phase_d1 <= 0; is_stride2_d1 <= 0;
+            cbuf_fire_d1 <= 0; stride_phase_d1 <= 0; is_stride2_d1 <= 0;
         end else begin
             free_vld_d1 <= h_en && (free_num_s0 > 0);
             free_num_d1 <= free_num_s0;
             step_en_d1  <= step_en; 
             
             cbuf_fire_d1    <= cbuf_fire;
-            phase_done_d1   <= phase_done;
             stride_phase_d1 <= stride_phase;
             is_stride2_d1   <= is_stride2;
 
@@ -487,11 +222,11 @@ module csc_dat #(
 
     reg [7:0]  in_p_mask_d5;
     
-    // 【新增】：传递相位控制信号对齐 4 拍延迟
-    reg cbuf_fire_d2, phase_done_d2, stride_phase_d2, is_stride2_d2;
-    reg cbuf_fire_d3, phase_done_d3, stride_phase_d3, is_stride2_d3;
-    reg cbuf_fire_d4, phase_done_d4, stride_phase_d4, is_stride2_d4;
-    reg cbuf_fire_d5, phase_done_d5, stride_phase_d5, is_stride2_d5;
+    // stride2 的相位信息继续后传，保证与 CBUF 返回数据严格对齐。
+    reg cbuf_fire_d2, stride_phase_d2, is_stride2_d2;
+    reg cbuf_fire_d3, stride_phase_d3, is_stride2_d3;
+    reg cbuf_fire_d4, stride_phase_d4, is_stride2_d4;
+    reg cbuf_fire_d5, stride_phase_d5, is_stride2_d5;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -502,18 +237,18 @@ module csc_dat #(
             mac_valid_d4 <= 0; mac_is_last_ci_d4 <= 0; mac_co_grp_d4 <= 0; in_p_mask_d4 <= 0; out_p_mask_d4 <= 0;
             in_p_mask_d5 <= 0; mac_valid <= 0; mac_pixel_mask <= 0; mac_co_grp <= 0; mac_is_last_ci <= 0;
             
-            cbuf_fire_d2 <= 0; phase_done_d2 <= 0; stride_phase_d2 <= 0; is_stride2_d2 <= 0;
-            cbuf_fire_d3 <= 0; phase_done_d3 <= 0; stride_phase_d3 <= 0; is_stride2_d3 <= 0;
-            cbuf_fire_d4 <= 0; phase_done_d4 <= 0; stride_phase_d4 <= 0; is_stride2_d4 <= 0;
-            cbuf_fire_d5 <= 0; phase_done_d5 <= 0; stride_phase_d5 <= 0; is_stride2_d5 <= 0;
+            cbuf_fire_d2 <= 0; stride_phase_d2 <= 0; is_stride2_d2 <= 0;
+            cbuf_fire_d3 <= 0; stride_phase_d3 <= 0; is_stride2_d3 <= 0;
+            cbuf_fire_d4 <= 0; stride_phase_d4 <= 0; is_stride2_d4 <= 0;
+            cbuf_fire_d5 <= 0; stride_phase_d5 <= 0; is_stride2_d5 <= 0;
         end else begin
             cbuf_rd_row_free <= free_vld_d1;
             cbuf_rd_free_num <= free_num_d1;
             
-            cbuf_fire_d2 <= cbuf_fire_d1; phase_done_d2 <= phase_done_d1; stride_phase_d2 <= stride_phase_d1; is_stride2_d2 <= is_stride2_d1;
-            cbuf_fire_d3 <= cbuf_fire_d2; phase_done_d3 <= phase_done_d2; stride_phase_d3 <= stride_phase_d2; is_stride2_d3 <= is_stride2_d2;
-            cbuf_fire_d4 <= cbuf_fire_d3; phase_done_d4 <= phase_done_d3; stride_phase_d4 <= stride_phase_d3; is_stride2_d4 <= is_stride2_d3;
-            cbuf_fire_d5 <= cbuf_fire_d4; phase_done_d5 <= phase_done_d4; stride_phase_d5 <= stride_phase_d4; is_stride2_d5 <= is_stride2_d4;
+            cbuf_fire_d2 <= cbuf_fire_d1; stride_phase_d2 <= stride_phase_d1; is_stride2_d2 <= is_stride2_d1;
+            cbuf_fire_d3 <= cbuf_fire_d2; stride_phase_d3 <= stride_phase_d2; is_stride2_d3 <= is_stride2_d2;
+            cbuf_fire_d4 <= cbuf_fire_d3; stride_phase_d4 <= stride_phase_d3; is_stride2_d4 <= is_stride2_d3;
+            cbuf_fire_d5 <= cbuf_fire_d4; stride_phase_d5 <= stride_phase_d4; is_stride2_d5 <= is_stride2_d4;
 
             mac_valid_d2      <= step_en_d1; 
             mac_is_last_ci_d2 <= mac_is_last_ci_d1; 

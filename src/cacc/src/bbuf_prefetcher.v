@@ -15,11 +15,10 @@ module bbuf_prefetcher #(
     input  wire [15:0]             cfg_b_total_beats, // 该层偏置总的 AXI 节拍数
 
     // ==========================================
-    // 监听 CACC Core 状态
+    // 监听 CACC 实际接收状态
     // ==========================================
-    input  wire                    mac_valid,
-    input  wire                    mac_is_last_ci,
-    input  wire [15:0]             mac_co_grp,
+    input  wire                    mac_accept_last_ci,
+    input  wire [15:0]             mac_accept_co_grp,
 
     // ==========================================
     // 驱动 BBUF 读接口
@@ -35,7 +34,7 @@ module bbuf_prefetcher #(
 );
 
     // 发令枪逻辑
-    wire trigger_t0 = mac_valid && mac_is_last_ci;
+    wire trigger_t0 = mac_accept_last_ci;
     reg        trigger_t1;
     reg [15:0] latched_co_grp_t1;
     
@@ -45,7 +44,7 @@ module bbuf_prefetcher #(
             latched_co_grp_t1 <= 16'd0;
         end else begin
             trigger_t1 <= trigger_t0;
-            if (trigger_t0) latched_co_grp_t1 <= mac_co_grp;
+            if (trigger_t0) latched_co_grp_t1 <= mac_accept_co_grp;
         end
     end
 
@@ -54,7 +53,7 @@ module bbuf_prefetcher #(
     // =======================================================
     //一个输出通道组占2个BBUF地址
     wire [ADDR_WIDTH-1:0] current_addr = trigger_t0 ? 
-                                        (mac_co_grp[ADDR_WIDTH-2:0] << 1) : 
+                                        (mac_accept_co_grp[ADDR_WIDTH-2:0] << 1) : 
                                         ((latched_co_grp_t1[ADDR_WIDTH-2:0] << 1) + 1'b1);
 
     assign bbuf_rd_addr = current_addr;

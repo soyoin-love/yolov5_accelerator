@@ -1,12 +1,10 @@
 `timescale 1ns / 1ps
 
 // 残差输入专用行缓存。
-// 底层由 8 个单端口 rbuf IP 组成，每个 bank 存 1 个像素的 8 通道数据。
-// 这里把读路径拆成 3 拍：
-// 1. 先计算行槽位、通道组和列块的部分地址；
-// 2. 再做一次加法，形成最终 SRAM 地址；
-// 3. 由单端口 SRAM 返回数据，并拉高 rd_dat_vld。
-// 因此从 rd_en 拉高到 rd_dat_vld 拉高固定为 3 个时钟周期。
+// 当前版本使用双端口 RAM：
+// 1. A 口只写，B 口只读，天然支持并行读写；
+// 2. 用户确认当前 rbuf IP 的 B 口从 enb/addrb 到 doutb 为 1 拍延迟；
+// 3. 外围仅保留必要的地址/控制打拍，避免再沿用旧单口 RAM 版本的冗长对齐链。
 module rbuf_dat_top #(
     parameter BANK_NUM   = 8,
     parameter TK_IN      = 8,
@@ -40,7 +38,9 @@ module rbuf_dat_top #(
     input  wire [3:0]                         rd_free_num,
     output wire                               rbuf_can_read,
     output reg                                rd_dat_vld,
-    output wire [BANK_NUM*TK_IN*N-1:0]        rd_dat_out
+    output wire [BANK_NUM*TK_IN*N-1:0]        rd_dat_out,
+    output wire [15:0]                        status_wr_row_ptr,
+    output wire [15:0]                        status_rd_row_ptr
 );
 
     localparam PIXEL_W = TK_IN * N;
@@ -67,35 +67,34 @@ module rbuf_dat_top #(
     reg [7:0]            rd_en_t2;
     reg                  rd_req_vld_t2;
 
-    reg [7:0]            rd_en_t3;
-    reg [BANK_NUM*PIXEL_W-1:0] rd_dat_masked;
+    reg [7:0]            rd_mask_t3;
+    reg                  rd_req_vld_t3;
+    reg [BANK_NUM*PIXEL_W-1:0] rd_dat_out_r;
 
     wire [ADDR_WIDTH-1:0] block_size;
     wire [15:0]           valid_rows;
-    wire                  wr_pipe_busy;
-    wire                  rd_pipe_busy;
     wire [ADDR_WIDTH-1:0] wr_addr_t1;
 
     wire [BANK_NUM-1:0]         bank_wr_en;
     wire [BANK_NUM-1:0]         bank_rd_en;
     wire [BANK_NUM*PIXEL_W-1:0] bank_rd_dat;
+    wire [BANK_NUM*PIXEL_W-1:0] rd_dat_masked_t3;
 
-    integer i;
+    genvar g;
+    genvar b;
 
-    assign block_size  = cfg_max_col_blocks * cfg_max_ch_groups;
-    assign valid_rows  = wr_row_ptr - rd_row_ptr;
-    assign wr_pipe_busy = wr_en | wr_pending | wr_en_t1;
-    assign rd_pipe_busy = (|rd_en) | rd_req_vld_t1 | rd_req_vld_t2;
-    assign wr_addr_t1  = wr_row_base_t1 + wr_ch_base_t1 + wr_col_base_t1;
+    assign block_size   = cfg_max_col_blocks * cfg_max_ch_groups;
+    assign valid_rows   = wr_row_ptr - rd_row_ptr;
+    assign wr_addr_t1   = wr_row_base_t1 + wr_ch_base_t1 + wr_col_base_t1;
 
-    // 单端口 SRAM 不能在同一拍同时接收新的读地址和写地址。
-    // 这里在 wrapper 层做互斥，保证读写路径干净，减轻地址路径压力。
-    assign rbuf_can_write = (valid_rows < ROW_BLOCKS) && !rd_pipe_busy;
-    assign rbuf_can_read  = (((valid_rows >= cfg_min_calc_rows) ||
-                            ((wr_row_ptr >= cfg_height) && (valid_rows > 0))) &&
-                            !wr_pipe_busy);
+    // 双端口版本不再做读写互斥，允许写端和读端独立工作。
+    assign rbuf_can_write = (valid_rows < ROW_BLOCKS);
+    assign rbuf_can_read  = ((valid_rows >= cfg_min_calc_rows) ||
+                            ((wr_row_ptr >= cfg_height) && (valid_rows > 0)));
 
-    assign rd_dat_out = rd_dat_masked;
+    assign status_wr_row_ptr = wr_row_ptr;
+    assign status_rd_row_ptr = rd_row_ptr;
+    assign rd_dat_out        = rd_dat_out_r;
 
     // 环形行指针。
     always @(posedge clk or negedge rst_n) begin
@@ -112,7 +111,7 @@ module rbuf_dat_top #(
         end
     end
 
-    // 写路径第 1 拍：提前完成行槽位、通道组和列块地址计算。
+    // 写路径第 1 拍：把写入位置与 bank 选择打一拍，缩短进入 RAM 的组合路径。
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n || start) begin
             wr_row_base_t1 <= {ADDR_WIDTH{1'b0}};
@@ -135,7 +134,7 @@ module rbuf_dat_top #(
         end
     end
 
-    // 读路径第 1 拍：先把乘法和移位拆开。
+    // 读路径第 1 拍：先寄存部分地址与读 mask。
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n || start) begin
             rd_row_base_t1 <= {ADDR_WIDTH{1'b0}};
@@ -151,13 +150,13 @@ module rbuf_dat_top #(
                 rd_en_t1       <= rd_en;
                 rd_req_vld_t1  <= 1'b1;
             end else begin
-                rd_en_t1      <= 8'd0;
-                rd_req_vld_t1 <= 1'b0;
+                rd_en_t1       <= 8'd0;
+                rd_req_vld_t1  <= 1'b0;
             end
         end
     end
 
-    // 读路径第 2 拍：完成最终地址加法。
+    // 读路径第 2 拍：形成最终 B 口地址并送入双端口 RAM。
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n || start) begin
             rd_addr_t2    <= {ADDR_WIDTH{1'b0}};
@@ -170,54 +169,70 @@ module rbuf_dat_top #(
         end
     end
 
-    genvar b;
     generate
         for (b = 0; b < BANK_NUM; b = b + 1) begin : RBUF_BANKS
-            wire [PIXEL_W-1:0] bank_wr_dat;
-            wire [ADDR_WIDTH-1:0] bank_addr;
-            wire bank_ena;
-            wire [0:0] bank_we;
+            wire [PIXEL_W-1:0]   bank_wr_dat;
+            wire [ADDR_WIDTH-1:0] bank_wr_addr;
+            wire [ADDR_WIDTH-1:0] bank_rd_addr;
+            wire                  bank_wena;
+            wire                  bank_renb;
+            wire [0:0]            bank_we;
 
             assign bank_wr_en[b] = wr_en_t1 &&
-                                ((b == wr_bank0_t1) || (b == wr_bank1_t1));
+                                   ((b == wr_bank0_t1) || (b == wr_bank1_t1));
             assign bank_rd_en[b] = rd_req_vld_t2 && rd_en_t2[b];
 
-            assign bank_wr_dat = ((b == wr_bank0_t1) ? wr_dat_t1[PIXEL_W-1:0] :
-                                ((b == wr_bank1_t1) ? wr_dat_t1[2*PIXEL_W-1:PIXEL_W] :
-                                {PIXEL_W{1'b0}}));
-            assign bank_addr = wr_en_t1 ? wr_addr_t1 : rd_addr_t2;
-            assign bank_ena  = bank_wr_en[b] | bank_rd_en[b];
-            assign bank_we[0] = bank_wr_en[b];
+            assign bank_wr_dat = (b == wr_bank0_t1) ? wr_dat_t1[PIXEL_W-1:0] :
+                                 (b == wr_bank1_t1) ? wr_dat_t1[2*PIXEL_W-1:PIXEL_W] :
+                                                      {PIXEL_W{1'b0}};
+            assign bank_wr_addr = wr_addr_t1;
+            assign bank_rd_addr = rd_addr_t2;
+            assign bank_wena    = bank_wr_en[b];
+            assign bank_renb    = bank_rd_en[b];
+            assign bank_we[0]   = bank_wr_en[b];
 
             rbuf u_bank (
                 .clka  (clk),
-                .ena   (bank_ena),
+                .ena   (bank_wena),
                 .wea   (bank_we),
-                .addra (bank_addr),
+                .addra (bank_wr_addr),
                 .dina  (bank_wr_dat),
-                .douta (bank_rd_dat[b*PIXEL_W +: PIXEL_W])
+                .clkb  (clk),
+                .enb   (bank_renb),
+                .addrb (bank_rd_addr),
+                .doutb (bank_rd_dat[b*PIXEL_W +: PIXEL_W])
             );
         end
     endgenerate
 
-    // 读路径第 3 拍：SRAM 返回数据，并对无效 bank 做清零。
+    // 读路径第 3 拍：B 口一拍返回后，再对齐 mask/valid。
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n || start) begin
-            rd_en_t3   <= 8'd0;
-            rd_dat_vld <= 1'b0;
+            rd_mask_t3    <= 8'd0;
+            rd_req_vld_t3 <= 1'b0;
         end else begin
-            rd_en_t3   <= rd_en_t2;
-            rd_dat_vld <= rd_req_vld_t2;
+            rd_mask_t3    <= rd_en_t2;
+            rd_req_vld_t3 <= rd_req_vld_t2;
         end
     end
 
-    always @(*) begin
-        rd_dat_masked = {(BANK_NUM*PIXEL_W){1'b0}};
+    generate
+        for (g = 0; g < BANK_NUM; g = g + 1) begin : GEN_RD_MASK
+            assign rd_dat_masked_t3[g*PIXEL_W +: PIXEL_W] =
+                rd_mask_t3[g] ? bank_rd_dat[g*PIXEL_W +: PIXEL_W] : {PIXEL_W{1'b0}};
+        end
+    endgenerate
 
-        for (i = 0; i < BANK_NUM; i = i + 1) begin
-            if (rd_en_t3[i]) begin
-                rd_dat_masked[i*PIXEL_W +: PIXEL_W] = bank_rd_dat[i*PIXEL_W +: PIXEL_W];
+    // 对外输出稳定数据与握手。
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n || start) begin
+            rd_dat_out_r <= {(BANK_NUM*PIXEL_W){1'b0}};
+            rd_dat_vld   <= 1'b0;
+        end else begin
+            if (rd_req_vld_t3) begin
+                rd_dat_out_r <= rd_dat_masked_t3;
             end
+            rd_dat_vld <= rd_req_vld_t3;
         end
     end
 

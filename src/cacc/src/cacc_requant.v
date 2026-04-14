@@ -15,7 +15,7 @@ module cacc_requant #(
     input  wire                               quant_vld,
     input  wire [PIXEL_NUM-1:0]               quant_pixel_mask, // 像素有效掩码
     input  wire [PIXEL_NUM*TOTAL_OUT_CH*ACC_W-1:0] quant_data_in,
-    input  wire [15:0]                        mac_co_grp,       // 从 CSC 传来的 16通道轮次计数
+    input  wire [15:0]                        quant_co_grp,     // 与 quant_data_in 同 bank 对齐的通道组
     output wire                               requant_ready,
 
     // CSR 配置接口 (新增)
@@ -53,7 +53,7 @@ module cacc_requant #(
     always @(posedge clk) begin
         if (requant_ready && quant_vld) begin
             p1_mask           <= quant_pixel_mask;
-            p1_mac_co_grp     <= mac_co_grp; 
+            p1_mac_co_grp     <= quant_co_grp; 
             p1_requant_params <= requant_params_1024b; // 【新增】：将当前周期的参数锁存打一拍
             
             for (p = 0; p < PIXEL_NUM; p = p + 1) begin

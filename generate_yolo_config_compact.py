@@ -47,6 +47,7 @@ def generate_yolo_config(
     o_base=0x00060000,
     res_base=0x00080000,
     cat_en=0,
+    cat_src0_upsample=0,
     cat_src1_base=0x00000000,
     cat_src0_ch_groups=0,
     cat_src0_line_stride=0,
@@ -77,17 +78,20 @@ def generate_yolo_config(
     full_layout = calc_feature_layout(W_in, ci_groups)
 
     cat_en = 1 if cat_en else 0
+    cat_src0_upsample = 1 if cat_src0_upsample else 0
     if cat_en:
         if cat_src0_ch_groups <= 0 or cat_src0_ch_groups >= ci_groups:
             raise ValueError(
                 "cat_src0_ch_groups must be in [1, total_input_groups - 1] when cat_en=1"
             )
         cat_src1_ch_groups = ci_groups - cat_src0_ch_groups
-        src0_layout = calc_feature_layout(W_in, cat_src0_ch_groups)
+        src0_width = ceil_div(W_in, 2) if cat_src0_upsample else W_in
+        src0_layout = calc_feature_layout(src0_width, cat_src0_ch_groups)
         src1_layout = calc_feature_layout(W_in, cat_src1_ch_groups)
     else:
         cat_src1_ch_groups = 0
-        src0_layout = calc_feature_layout(W_in, ci_groups)
+        src0_width = ceil_div(W_in, 2) if cat_src0_upsample else W_in
+        src0_layout = calc_feature_layout(src0_width, ci_groups)
         src1_layout = {"beats_per_row": 0, "surface_stride": 0, "line_stride": 0}
 
     # stride 配置默认为 0，表示让硬件按标准连续布局自动推导。
@@ -96,22 +100,22 @@ def generate_yolo_config(
         0x14: w_base,
         0x18: b_base,
         0x1C: o_base,
-        0x20: (W_in << 16) | H_in,
+        0x20: res_base,
+        0x24: (W_in << 16) | H_in,
         0x28: (W_out << 16) | H_out,
         0x2C: (ci_groups << 16) | C_out,
         0x30: (Py << 12) | (Px << 8) | (Ky << 4) | Kx,
         0x34: (Sy << 9) | (Sx << 5) | (active_banks << 1) | is_odd_oc,
         0x38: coords_per_region & 0xFFFF,
-        0x40: wt_total_beats,
-        0x48: (relu_en << 16) | b_total_beats,
-        0x54: (resadd_relu_en << 3) | (pool_pad_zero << 2) | (op_mode & 0x3),
-        0x58: res_base,
-        0x5C: cat_src1_base,
-        0x60: ((cat_en & 0x1) << 16) | (cat_src0_ch_groups & 0xFFFF),
-        0x64: cat_src0_line_stride,
-        0x68: cat_src1_line_stride,
-        0x6C: cat_src0_surface_stride,
-        0x70: cat_src1_surface_stride,
+        0x3C: wt_total_beats,
+        0x40: (relu_en << 16) | b_total_beats,
+        0x44: (resadd_relu_en << 3) | (pool_pad_zero << 2) | (op_mode & 0x3),
+        0x48: cat_src1_base,
+        0x4C: ((cat_src0_upsample & 0x1) << 17) | ((cat_en & 0x1) << 16) | (cat_src0_ch_groups & 0xFFFF),
+        0x50: cat_src0_line_stride,
+        0x54: cat_src1_line_stride,
+        0x58: cat_src0_surface_stride,
+        0x5C: cat_src1_surface_stride,
     }
 
     with open(filename, "w", encoding="utf-8") as f:
@@ -129,6 +133,7 @@ def generate_yolo_config(
         "b_total_beats": b_total_beats,
         "wt_total_beats": wt_total_beats,
         "cat_en": cat_en,
+        "cat_src0_upsample": cat_src0_upsample,
         "cat_src0_ch_groups": cat_src0_ch_groups,
         "cat_src1_ch_groups": cat_src1_ch_groups,
         "full_layout": full_layout,
@@ -164,6 +169,7 @@ def build_argparser():
 
     # virtual concat 配置，默认保持关闭。
     parser.add_argument("--cat_en", type=int, default=0)
+    parser.add_argument("--cat_src0_upsample", type=int, default=0)
     parser.add_argument("--cat_src1_base", type=lambda x: int(x, 0), default=0x00000000)
     parser.add_argument("--cat_src0_ch_groups", type=int, default=0)
     parser.add_argument("--cat_src0_line_stride", type=lambda x: int(x, 0), default=0)
@@ -188,9 +194,10 @@ def main():
         f"wt_total_beats={result['wt_total_beats']}"
     )
 
-    if result["cat_en"]:
+    if result["cat_en"] or result["cat_src0_upsample"]:
         print(
-            "Concat: "
+            "Feature load: "
+            f"src0_upsample={result['cat_src0_upsample']}, "
             f"src0_groups={result['cat_src0_ch_groups']}, "
             f"src1_groups={result['cat_src1_ch_groups']}, "
             f"auto_src0_line_stride=0x{result['src0_layout']['line_stride']:08X}, "

@@ -42,8 +42,10 @@ module cacc_top #(
     // =========================================================================
     wire quant_vld, requant_ready;
     wire [PIXEL_NUM-1:0] quant_pixel_mask; 
+    wire [15:0] quant_co_grp;
     wire [PIXEL_NUM*OUT_CH_NUM*ACC_W-1:0] quant_data;
     wire [1023:0] requant_params_1024b;
+    wire accepted_last_ci = mac_valid && cacc_ready && mac_is_last_ci;
 
     // =========================================================================
     // A. 核心累加器 (cacc_core)
@@ -60,11 +62,13 @@ module cacc_top #(
         .mac_valid(mac_valid), 
         .mac_pixel_mask(mac_pixel_mask), 
         .mac_is_last_ci(mac_is_last_ci), 
+        .mac_co_grp(mac_co_grp),
         .psum_in(psum_in), 
         .requant_ready(requant_ready), 
         .cacc_ready(cacc_ready),
         .quant_vld(quant_vld), 
         .quant_pixel_mask(quant_pixel_mask), 
+        .quant_co_grp(quant_co_grp),
         .quant_data_in(quant_data)
     );
 
@@ -79,9 +83,8 @@ module cacc_top #(
         .clk(clk), 
         .rst_n(rst_n),
         .cfg_b_total_beats(cfg_b_total_beats),
-        .mac_valid(mac_valid), 
-        .mac_is_last_ci(mac_is_last_ci), 
-        .mac_co_grp(mac_co_grp), 
+        .mac_accept_last_ci(accepted_last_ci),
+        .mac_accept_co_grp(mac_co_grp),
         .bbuf_rd_en(bbuf_rd_en), 
         .bbuf_rd_addr(bbuf_rd_addr), 
         .bbuf_rd_dat(bbuf_rd_dat),
@@ -106,7 +109,7 @@ module cacc_top #(
         .quant_vld(quant_vld), 
         .quant_pixel_mask(quant_pixel_mask), 
         .quant_data_in(quant_data), 
-        .mac_co_grp(mac_co_grp),       
+        .quant_co_grp(quant_co_grp),       
         .requant_ready(requant_ready),
 
         // CSR 配置接口 
