@@ -14,6 +14,7 @@ module yolo_global_fsm (
     // 网络维度参数
     input  wire [15:0] cfg_h_out,     // 输出特征图总行数，用于比对权重重载次数
     input  wire [1:0]  cfg_op_mode,   // 0: convolution, 1: pooling, 2: residual add
+    input  wire        cfg_wt_resident_en, // 1: 权重整层常驻，首轮搬运完成后不再逐行重载
 
     // ==========================================
     // 发往各子模块的发令枪 (Start Signals)
@@ -135,7 +136,7 @@ module yolo_global_fsm (
             ap_done      <= 1'b0;
 
             // 监听 CSC 脉冲并存入挂起寄存器 (防止脉冲丢失)
-            if (state == ST_RUNNING && (cfg_op_mode == OP_CONV) && csc_row_done) begin
+            if (state == ST_RUNNING && (cfg_op_mode == OP_CONV) && !cfg_wt_resident_en && csc_row_done) begin
                 w_reload_pending <= 1'b1;
             end
 
@@ -183,9 +184,9 @@ module yolo_global_fsm (
                 end
 
                 ST_RUNNING: begin
-                    // 【权重重载机制】
-                    // 触发条件：有重载请求 pending + 当前不忙 + 还没超出行数限制
-                    if (w_reload_pending && !w_cdma_busy && (w_run_cnt < cfg_h_out)) begin
+                    // resident 模式下权重整层常驻，只在首轮 INIT_FIRE 搬运一次；
+                    // 非 resident 模式保持原先逐行重载机制。
+                    if (!cfg_wt_resident_en && w_reload_pending && !w_cdma_busy && (w_run_cnt < cfg_h_out)) begin
                         w_cdma_start     <= 1'b1;
                         w_cdma_busy      <= 1'b1;
                         w_reload_pending <= 1'b0;          // 消耗掉挂起的请求

@@ -48,7 +48,8 @@ module csc_dat #(
     output wire [BANK_NUM-1:0] wbuf_rd_en,
     output wire        wbuf_step_en,
     output wire        wbuf_offset_clr,    
-    output wire        wbuf_region_done,   
+    output wire        wbuf_region_done,
+    output wire [1:0]  wbuf_region_idx,
 
     // ==========================================
     // 3. MAC 阵列交互接口
@@ -204,6 +205,8 @@ module csc_dat #(
     assign wbuf_step_en     = step_en_d1;
     assign wbuf_offset_clr  = wbuf_offset_clr_d1;
     assign wbuf_region_done = wbuf_region_done_d1;
+    // resident 模式下，WBUF 需要根据当前 16 通道组编号选择常驻 region。
+    assign wbuf_region_idx  = co_grp_d1[1:0];
 
     // =====================================================================
     // [Stage 2] ~ [Stage 5] 控制流水线 

@@ -6,6 +6,16 @@ def ceil_div(value, factor):
     return (value + factor - 1) // factor
 
 
+def calc_wt_resident_en(op_mode, co_groups_x16):
+    """根据当前硬件 resident 条件生成权重常驻使能。
+
+    当前设计仅在卷积模式下使用该位，并且要求：
+    1. 每个 region 已能容纳 Kx * Ky * ch_in_grp 个地址
+    2. 全部 16 通道输出组数量不超过 4 个
+    """
+    return 1 if (op_mode == 0 and co_groups_x16 <= 4) else 0
+
+
 def calc_feature_layout(width, ch_groups, bytes_per_beat=16):
     """按当前特征图 DDR 排布推导默认 stride。
 
@@ -54,6 +64,7 @@ def generate_yolo_config(
     cat_src1_line_stride=0,
     cat_src0_surface_stride=0,
     cat_src1_surface_stride=0,
+    wt_resident_en=-1,
 ):
     # 输出宽高依然由软件根据卷积参数推导。
     W_out = (W_in - Kx + 2 * Px) // Sx + 1
@@ -94,6 +105,11 @@ def generate_yolo_config(
         src0_layout = calc_feature_layout(src0_width, ci_groups)
         src1_layout = {"beats_per_row": 0, "surface_stride": 0, "line_stride": 0}
 
+    if wt_resident_en < 0:
+        wt_resident_en = calc_wt_resident_en(op_mode, co_groups_x16)
+    else:
+        wt_resident_en = 1 if wt_resident_en else 0
+
     # stride 配置默认为 0，表示让硬件按标准连续布局自动推导。
     config_dict = {
         0x10: f_base,
@@ -116,6 +132,7 @@ def generate_yolo_config(
         0x54: cat_src1_line_stride,
         0x58: cat_src0_surface_stride,
         0x5C: cat_src1_surface_stride,
+        0x60: wt_resident_en,
     }
 
     with open(filename, "w", encoding="utf-8") as f:
@@ -136,6 +153,7 @@ def generate_yolo_config(
         "cat_src0_upsample": cat_src0_upsample,
         "cat_src0_ch_groups": cat_src0_ch_groups,
         "cat_src1_ch_groups": cat_src1_ch_groups,
+        "wt_resident_en": wt_resident_en,
         "full_layout": full_layout,
         "src0_layout": src0_layout,
         "src1_layout": src1_layout,
@@ -176,6 +194,8 @@ def build_argparser():
     parser.add_argument("--cat_src1_line_stride", type=lambda x: int(x, 0), default=0)
     parser.add_argument("--cat_src0_surface_stride", type=lambda x: int(x, 0), default=0)
     parser.add_argument("--cat_src1_surface_stride", type=lambda x: int(x, 0), default=0)
+    parser.add_argument("--wt_resident_en", type=int, default=-1,
+                        help="-1 表示按 co_groups_x16<=4 自动判断，0/1 表示强制关闭/打开")
     return parser
 
 
@@ -191,7 +211,8 @@ def main():
         f"H_out={result['H_out']}, "
         f"ci_groups={result['ci_groups']}, "
         f"co_groups_x16={result['co_groups_x16']}, "
-        f"wt_total_beats={result['wt_total_beats']}"
+        f"wt_total_beats={result['wt_total_beats']}, "
+        f"wt_resident_en={result['wt_resident_en']}"
     )
 
     if result["cat_en"] or result["cat_src0_upsample"]:

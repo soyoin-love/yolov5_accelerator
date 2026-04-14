@@ -13,8 +13,10 @@
 # //
 # do {testbench_simulate.do}
 # vsim -voptargs=""+acc"" -L xil_defaultlib -L blk_mem_gen_v8_4_8 -L unisims_ver -L unimacro_ver -L secureip -L xpm -lib xil_defaultlib xil_defaultlib.testbench xil_defaultlib.glbl 
-# Start time: 09:52:12 on Apr 14,2026
-# ** Note: (vsim-8009) Loading existing optimized design _opt
+# Start time: 08:43:26 on Apr 14,2026
+# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
+# ** Warning: (vopt-2009) At least one design unit was compiled with optimization level -O0 or -O1.
+# Use vdir -l command to find such design units.
 # Loading sv_std.std
 # Loading work.testbench(fast)
 # Loading work.yolo_sim_top(fast)
@@ -96,7 +98,7 @@
 # =======================================================
 # 
 # 
-# ================ RESADD_LINEAR ================
+# ================ CONV_LINEAR ================
 # 
 # Block Memory Generator module testbench.u_dut.u_accel.u_mem_domain.u_cbuf.BANK_INST[0].u_buf.inst.native_mem_module.blk_mem_gen_v8_4_8_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
 # Block Memory Generator module testbench.u_dut.u_accel.u_mem_domain.u_cbuf.BANK_INST[1].u_buf.inst.native_mem_module.blk_mem_gen_v8_4_8_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
@@ -146,27 +148,30 @@
 # Block Memory Generator module testbench.u_dut.u_accel.u_obuf.OBUF_BANKS[13].u_bank.inst.native_mem_module.blk_mem_gen_v8_4_8_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
 # Block Memory Generator module testbench.u_dut.u_accel.u_obuf.OBUF_BANKS[14].u_bank.inst.native_mem_module.blk_mem_gen_v8_4_8_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
 # Block Memory Generator module testbench.u_dut.u_accel.u_obuf.OBUF_BANKS[15].u_bank.inst.native_mem_module.blk_mem_gen_v8_4_8_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
-# === [RESADD_SRC0] build feature tensor 60x60x16 at 0x00000000 ===
-# [RESADD_SRC0][DBG] beat[0] = 2411feebd8c5b29f1704f1decbb8a592
-# [RESADD_SRC0][DBG] beat[1] = 3e2b1805f2dfccb9311e0bf8e5d2bfac
-# === [RESADD_SRC1] build feature tensor 60x60x16 at 0x000a0000 ===
-# [RESADD_SRC1][DBG] beat[0] = 54391e03e8cdb297452a0ff4d9bea388
-# [RESADD_SRC1][DBG] beat[1] = 72573c2106ebd0b563482d12f7dcc1a6
-# === [RESADD_REF] build software reference ===
-# [RESADD_REF][DBG] ref_ofm[0][0][0] = -128
-# === [RESADD_LINEAR] wait ap_done ===
+# === [CSC_DBG] enable cbuf/wbuf/phase checker ===
+# === [CONV_LINEAR] build feature tensor 80x80x3 at 0x00000000 ===
+# [CONV_LINEAR][DBG] beat[0] = 0000000000fd0200000000000001fffd
+# [CONV_LINEAR][DBG] beat[1] = 00000000000301ff000000000000fe03
+# [CONV_LINEAR][DBG] conv_weight_beat[0] = 00000000000001ff00000000000001ff
+# [CONV_LINEAR][DBG] conv_weight_beat[1] = 00000000000001ff00000000000001ff
+# [CONV_LINEAR][DBG] conv_weight_beat[2] = 00000000000001ff00000000000001ff
+# [CONV_LINEAR][DBG] conv_weight_beat[3] = 00000000000001ff00000000000001ff
+# === [Ref Model]  Ë¡—wï: 40x40 (In: 3, Out: 16) ===
+# === [Ref Model] wïÂ¡—Œ ===
+# === [CONV_LINEAR] wait ap_done ===
 run -all
-# === [RESADD_LINEAR] ap_done at 78445000 ===
+# === [CONV_LINEAR] ap_done at 151275000 ===
 # === [Scoreboard]  ËÔùlö“úÓœ (z: H -> C_grp -> W_grp) ===
-# === [Result] ŒÁÇlö“úoöÂŒh ô (qÔù 57600 *¹) ===
+# === [Result] ŒÁÇlö“úoöÂŒh ô (qÔù 25600 *¹) ===
+# === [CSC_DBG] disable checker: cbuf_err=0, wbuf_err=0, phase_err=0 ===
 # 
 # =======================================================
 # >>> all operator verification tasks have finished
 # =======================================================
 # 
-# ** Note: $finish    : ../../../../sim/testbench.sv(293)
-#    Time: 79140 ns  Iteration: 0  Instance: /testbench
+# ** Note: $finish    : ../../../../sim/testbench.sv(295)
+#    Time: 151970 ns  Iteration: 0  Instance: /testbench
 # 1
-# Break in Module testbench at ../../../../sim/testbench.sv line 293
-# End time: 09:52:52 on Apr 14,2026, Elapsed time: 0:00:40
-# Errors: 0, Warnings: 0
+# Break in Module testbench at ../../../../sim/testbench.sv line 295
+# End time: 09:42:16 on Apr 14,2026, Elapsed time: 0:58:50
+# Errors: 0, Warnings: 1

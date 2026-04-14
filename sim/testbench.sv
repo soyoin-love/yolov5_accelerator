@@ -35,6 +35,8 @@ int TB_CONV_SY          = 1;
 int TB_CONV_PX          = 1;
 int TB_CONV_PY          = 1;
 int TB_CONV_IFM_PATTERN = 4;
+// 1: 由软件侧按 co_grp<=4 自动开启 resident 模式；0: 始终关闭。
+bit TB_AUTO_WT_RESIDENT_EN = 1'b1;
 
 // 池化算子验证参数
 int TB_POOL_W           = 100;

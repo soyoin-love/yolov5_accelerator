@@ -98,6 +98,7 @@ module yolo_sim_top #(
     reg [3:0]   cfg_csc_stride_x;
     reg [3:0]   cfg_wt_active_banks;
     reg         cfg_wt_is_odd_oc;
+    reg         cfg_wt_resident_en;
     reg [15:0]  cfg_wt_coords_per_region;
     reg [27:0]  cfg_wt_total_beats;
 
@@ -144,6 +145,7 @@ module yolo_sim_top #(
             cfg_csc_stride_x <= 4'd0;
             cfg_wt_active_banks <= 4'd0;
             cfg_wt_is_odd_oc <= 1'b0;
+            cfg_wt_resident_en <= 1'b0;
             cfg_wt_coords_per_region <= 16'd0;
             cfg_wt_total_beats <= 28'd0;
 
@@ -201,6 +203,7 @@ module yolo_sim_top #(
                     8'h54: cfg_cat_src1_line_stride <= cfg_wdata;
                     8'h58: cfg_cat_src0_surface_stride <= cfg_wdata;
                     8'h5C: cfg_cat_src1_surface_stride <= cfg_wdata;
+                    8'h60: cfg_wt_resident_en <= cfg_wdata[0];
 
                     default: ;
                 endcase
@@ -219,6 +222,7 @@ module yolo_sim_top #(
         .ap_idle      (ap_idle),
         .cfg_h_out    (cfg_out_height),
         .cfg_op_mode  (cfg_op_mode),
+        .cfg_wt_resident_en(cfg_wt_resident_en),
         .w_cdma_start (w_cdma_start),
         .f_cdma_start (f_cdma_start),
         .b_cdma_start (b_cdma_start),
@@ -263,6 +267,7 @@ module yolo_sim_top #(
         .cfg_wt_coords_per_region    (cfg_wt_coords_per_region),
         .cfg_wt_active_banks         (cfg_wt_active_banks),
         .cfg_wt_is_odd_oc            (cfg_wt_is_odd_oc),
+        .cfg_wt_resident_en          (cfg_wt_resident_en),
 
         .cfg_f_base_addr             (cfg_f_base_addr),
         .cfg_in_width                (cfg_in_width),

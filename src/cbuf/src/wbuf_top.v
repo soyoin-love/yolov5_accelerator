@@ -17,6 +17,8 @@ module wbuf_dat_top #(
     input  wire [REGION_W-1:0]                wr_offset,      
     input  wire [127:0]                       wr_dat,
     input  wire                               wr_region_done, 
+    input  wire                               cfg_wt_resident_en,
+    input  wire [15:0]                        cfg_total_regions,
     output wire                               wbuf_can_write, 
 
     // ==========================================
@@ -26,6 +28,7 @@ module wbuf_dat_top #(
     input  wire                               csc_step_en,    
     input  wire                               csc_offset_clr, // 新增：单像素窗口算完
     input  wire                               csc_region_done,// 新增：当前通道组彻底算完
+    input  wire [1:0]                         csc_region_idx,
     output wire                               wbuf_can_read,  
 
     // ==========================================
@@ -49,22 +52,27 @@ module wbuf_dat_top #(
             if (wr_region_done) 
                 wr_region_ptr <= wr_region_ptr + 1'b1;
             
-            // 当前通道组算完，彻底抛弃当前权重区域
-            if (csc_step_en && csc_region_done) 
+            // 常驻模式下 region 会跨多行重复复用，因此不能再按旧逻辑破坏性前移读指针。
+            if (!cfg_wt_resident_en && csc_step_en && csc_region_done) 
                 rd_region_ptr <= rd_region_ptr + 1'b1;
         end
     end
 
     wire [2:0] valid_regions = wr_region_ptr - rd_region_ptr;
+    wire [2:0] cfg_total_regions_s = cfg_total_regions[2:0];
 
     // 【核心修复】安全的前瞻扣除逻辑，防止溢出产生幽灵触发
-    wire consuming_last_beat = csc_step_en && csc_region_done;
+    wire consuming_last_beat = csc_step_en && csc_region_done && (valid_regions != 0);
     wire [2:0] effective_valid_regions = consuming_last_beat ? (valid_regions - 1'b1) : valid_regions;
+    // resident 模式下，软件已保证所有 co_grp 均可驻留在 4 个 region 内；
+    // 因此只要首轮将全部 region 预装完成，即可对整层反复复用。
+    wire resident_load_done = (cfg_total_regions_s != 0) && (wr_region_ptr >= cfg_total_regions_s);
 
-    assign wbuf_can_write = (valid_regions < 4); 
-    assign wbuf_can_read  = (effective_valid_regions > 0); 
+    assign wbuf_can_write = cfg_wt_resident_en ? (wr_region_ptr < cfg_total_regions_s) : (valid_regions < 4); 
+    assign wbuf_can_read  = cfg_wt_resident_en ? resident_load_done : (effective_valid_regions > 0); 
 
     wire [ADDR_WIDTH-1:0] wr_addr = {wr_region_ptr[1:0], wr_offset};
+    wire [1:0] rd_region_sel = cfg_wt_resident_en ? csc_region_idx : rd_region_ptr[1:0];
 
     // ==========================================================
     // B. Stage 1: 地址生成与流水线打拍
@@ -80,7 +88,9 @@ module wbuf_dat_top #(
             rd_addr_p1 <= 0;
         end else begin
             rd_en_p1   <= csc_step_en ? csc_wt_rd_en : 8'h00;
-            rd_addr_p1 <= {rd_region_ptr[1:0], rd_offset}; 
+            // 常驻模式直接由 CSC 当前 co_grp 选择 region；
+            // 非常驻模式保持原有环形读指针语义。
+            rd_addr_p1 <= {rd_region_sel, rd_offset}; 
 
             if (csc_step_en) begin
                 if (csc_offset_clr) rd_offset <= 0; // 单个窗口扫描完毕，复位等下一个像素块复用

@@ -117,6 +117,9 @@ read_verilog -library xil_defaultlib {
   E:/IEEE2027/yolov5_accelerator/src/CSR/yolo_top.v
   E:/IEEE2027/yolov5_accelerator/src/CSR/yolo_sim_top.v
 }
+read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/rbuf_1/rbuf.xci
+set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/rbuf_1/rbuf_ooc.xdc]
+
 read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/wbuf_1/wbuf.xci
 set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/wbuf_1/wbuf_ooc.xdc]
 
@@ -129,9 +132,6 @@ set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_acc
 read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/o_buf/o_buf.xci
 set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/o_buf/o_buf_ooc.xdc]
 
-read_ip -quiet E:/IEEE2027/yolov5_accelerator/ip/rbuf/rbuf.xci
-set_property used_in_implementation false [get_files -all e:/IEEE2027/yolov5_accelerator/ip/rbuf/rbuf_ooc.xdc]
-
 OPTRACE "Adding files" END { }
 # Mark all dcp files as not used in implementation to prevent them from being
 # stitched into the results of this synthesis run. Any black boxes in the
@@ -141,6 +141,8 @@ OPTRACE "Adding files" END { }
 foreach dcp [get_files -quiet -all -filter file_type=="Design\ Checkpoint"] {
   set_property used_in_implementation false $dcp
 }
+read_xdc dont_touch.xdc
+set_property used_in_implementation false [get_files dont_touch.xdc]
 set_param ips.enableIPCacheLiteLoad 1
 close [open __synthesis_is_running__ w]
 

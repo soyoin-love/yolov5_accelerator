@@ -33,6 +33,17 @@ function automatic int calc_active_banks(input int out_channels);
 endfunction
 
 
+// resident 模式判定：当前软件侧已经保证每个 region 足够容纳 Kx*Ky*ch_in_grp。
+// 因此只要 16 通道输出组总数不超过 4，就可以整层常驻在 WBUF 中。
+function automatic int calc_wt_resident_en(input int out_channels);
+    int co_groups_x16;
+    begin
+        co_groups_x16 = ceil_div_int(out_channels, 16);
+        calc_wt_resident_en = (co_groups_x16 <= 4) ? 1 : 0;
+    end
+endfunction
+
+
 
 // 依据硬件打包格式估算权重总拍数。
 function automatic int calc_wt_total_beats(
@@ -158,7 +169,7 @@ endtask
 task automatic clear_compact_regs();
     int addr;
     begin
-        for (addr = 'h10; addr <= 'h5C; addr = addr + 4) begin
+        for (addr = 'h10; addr <= 'h60; addr = addr + 4) begin
             cfg_write(addr[7:0], 32'd0);
         end
     end
@@ -421,6 +432,7 @@ task automatic program_pool_cfg(
         cfg_write(8'h28, {width[15:0], height[15:0]});
         cfg_write(8'h2C, {ch_groups[15:0], channels[15:0]});
         cfg_write(8'h44, ((pad_zero ? 1 : 0) << 2) | TB_OP_POOL);
+        cfg_write(8'h60, 32'd0);
         cfg_write(8'h00, 32'h0000_0001);
     end
 endtask
@@ -446,6 +458,7 @@ task automatic program_resadd_cfg(
         cfg_write(8'h28, {width[15:0], height[15:0]});
         cfg_write(8'h2C, {ch_groups[15:0], channels[15:0]});
         cfg_write(8'h44, ((relu_en ? 1 : 0) << 3) | TB_OP_RESADD);
+        cfg_write(8'h60, 32'd0);
         cfg_write(8'h00, 32'h0000_0001);
     end
 endtask
@@ -481,6 +494,7 @@ task automatic program_conv_cfg(
     int is_odd_oc;
     int wt_total_beats;
     int b_total_beats;
+    int wt_resident_en;
     begin
         in_ch_groups      = ceil_div_int(in_channels, 8);
         coords_per_region = in_ch_groups * kx * ky;
@@ -488,6 +502,7 @@ task automatic program_conv_cfg(
         is_odd_oc         = out_channels[0];
         wt_total_beats    = calc_wt_total_beats(in_ch_groups, out_channels, kx, ky);
         b_total_beats     = ceil_div_int(out_channels, 2);
+        wt_resident_en    = (TB_AUTO_WT_RESIDENT_EN != 0) ? calc_wt_resident_en(out_channels) : 0;
 
         clear_compact_regs();
         cfg_write(8'h10, f_base);
@@ -512,6 +527,7 @@ task automatic program_conv_cfg(
         cfg_write(8'h54, 32'd0);
         cfg_write(8'h58, 32'd0);
         cfg_write(8'h5C, 32'd0);
+        cfg_write(8'h60, wt_resident_en);
         cfg_write(8'h00, 32'h0000_0001);
     end
 endtask
@@ -878,14 +894,14 @@ endtask
 // 顺序执行所有算子回归任务。  上采样,卷积,池化,contact过了.残差没过
 task automatic run_operator_regression();
     begin
-        //run_conv_case(1'b0);
+        run_conv_case(1'b0);
         //run_conv_case(1'b1);
         //run_pool_case(1'b0);
         // run_pool_case(1'b1);
         //run_upsample_case();
         //run_concat_case();
         //run_upsample_concat_case();
-        run_resadd_case(1'b0);
+        //run_resadd_case(1'b0);
         //run_resadd_case(1'b1);
 
         $display("\n=======================================================");

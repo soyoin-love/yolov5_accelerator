@@ -29,6 +29,7 @@
 | `0x54` | `cfg_cat_src1_line_stride`，写 `0` 表示按标准布局自动推导 |
 | `0x58` | `cfg_cat_src0_surface_stride`，写 `0` 表示按标准布局自动推导 |
 | `0x5C` | `cfg_cat_src1_surface_stride`，写 `0` 表示按标准布局自动推导 |
+| `0x60` | `cfg_wt_resident_en`，`1` 表示整层权重首轮搬完后常驻 WBUF，不再逐行重载 |
 
 ## virtual concat 语义
 
@@ -75,3 +76,4 @@ addr = base
 - `OBUF/WDMA/Pool/ResAdd/RBUF` 的输出通道组粒度是 `8`。
 - 这两种粒度都由同一个 `cfg_out_channels` 在顶层分别换算，软件侧不需要重复配置。
 - 对标准连续布局，软件层通常只需要配置 `0x48` 和 `0x4C`，其余 concat stride 寄存器写 `0` 即可。
+- `cfg_wt_resident_en = 1` 的前提是：每个 WBUF region 已足够容纳 `Kx * Ky * ch_in_grp` 个地址，且 `ceil(cfg_out_channels / 16) <= 4`。

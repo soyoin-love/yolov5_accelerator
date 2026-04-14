@@ -60,6 +60,7 @@ module yolo_accel_top #(
     input  wire [15:0]                        cfg_wt_coords_per_region,
     input  wire [3:0]                         cfg_wt_active_banks,
     input  wire                               cfg_wt_is_odd_oc,
+    input  wire                               cfg_wt_resident_en,
     input  wire [31:0]                        cfg_f_base_addr,
     input  wire [15:0]                        cfg_in_width,
     input  wire [15:0]                        cfg_in_height,
@@ -211,6 +212,7 @@ module yolo_accel_top #(
     wire                                wbuf_step_en;
     wire                                wbuf_offset_clr;
     wire                                wbuf_region_done;
+    wire [1:0]                          wbuf_region_idx;
     wire                                wbuf_rd_dat_vld;
     wire [BANK_NUM*AXI_DATA_WIDTH-1:0]  wbuf_rd_dat_out;
 
@@ -567,11 +569,14 @@ module yolo_accel_top #(
         .wbuf_wr_offset         (wbuf_wr_offset),
         .wbuf_wr_dat            (wbuf_wr_dat),
         .wbuf_wr_region_done    (wbuf_wr_region_done),
+        .cfg_wt_resident_en     (cfg_wt_resident_en),
+        .cfg_wbuf_total_regions (cfg_wt_total_co_groups),
         .wbuf_can_write         (wbuf_can_write),
         .wbuf_csc_offset_clr    (wbuf_offset_clr),
         .wbuf_csc_region_done   (wbuf_region_done),
         .wbuf_csc_rd_en         (wbuf_rd_en),
         .wbuf_csc_step_en       (wbuf_step_en),
+        .wbuf_csc_region_idx    (wbuf_region_idx),
         
         .wbuf_can_read          (wbuf_can_read),
         .wbuf_rd_dat_vld        (wbuf_rd_dat_vld),
@@ -643,6 +648,7 @@ module yolo_accel_top #(
         
         .wbuf_can_read(wbuf_can_read), .wbuf_rd_en(wbuf_rd_en),
         .wbuf_step_en(wbuf_step_en), .wbuf_offset_clr(wbuf_offset_clr), .wbuf_region_done(wbuf_region_done),
+        .wbuf_region_idx(wbuf_region_idx),
 
         .mac_buf_ready(mac_buf_ready), .mac_dat(mac_features_in), 
         .mac_valid(csc_mac_valid), .mac_pixel_mask(csc_mac_pixel_mask),
